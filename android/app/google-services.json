@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1078828407882",
+    "project_id": "revboostapp-b0307",
+    "storage_bucket": "revboostapp-b0307.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1078828407882:android:fb43babbfe44b5aaa79ab3",
+        "android_client_info": {
+          "package_name": "com.revboostapp.revboostapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBE2bpyvKdx1z9OVz3sbikk1Hlm3DcykM0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

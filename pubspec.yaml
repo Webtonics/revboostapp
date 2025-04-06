@@ -58,15 +58,33 @@ dependencies:
   cloud_firestore: ^5.6.6
   lottie: ^3.3.1
   
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^2.0.0
+  flutter_native_splash: ^2.4.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter packages.
+flutter_native_splash:
+  color: "#2563EB"
+  image: assets/splash_logo_light.png
+  branding: assets/branding_light.png
+  color_dark: "#1E3A8A"
+  image_dark: assets/splash_logo_dark.png
+  branding_dark: assets/branding_dark.png
+  
+  android_12:
+    image: assets/splash_logo_light.png
+    icon_background_color: "#2563EB"
+    image_dark: assets/splash_logo_dark.png
+    icon_background_color_dark: "#1E3A8A"
+
+  web: true
+
 flutter:
 
   # The following line ensures that the Material Icons font is
@@ -77,6 +95,9 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/lottie/
+    - assets/icons/
+    - assets/
+
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
@@ -104,3 +125,5 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+  
+  

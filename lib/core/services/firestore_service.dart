@@ -20,14 +20,18 @@ class FirestoreService {
       _firestore.collection('reviewRequests');
   
   // User operations
-  Future<void> createUser(UserModel user) async {
-    try {
-      await usersCollection.doc(user.id).set(user.toFirestore());
-    } catch (e) {
-      debugPrint('Error creating user: $e');
-      rethrow;
-    }
+  // In createUser method of FirestoreService
+Future<void> createUser(UserModel user) async {
+  try {
+    print("Creating user document for ${user.id}");
+    await usersCollection.doc(user.id).set(user.toFirestore());
+    print("User document created successfully");
+  } catch (e) {
+    print("Error creating user document: $e");
+    debugPrint('Error creating user: $e');
+    rethrow;
   }
+}
   
   Future<UserModel?> getUserById(String userId) async {
     try {

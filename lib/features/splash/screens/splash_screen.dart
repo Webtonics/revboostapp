@@ -1,5 +1,4 @@
 // lib/features/splash/screens/splash_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
@@ -42,7 +41,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // You can replace this with your app logo or a Lottie animation
+            // Lottie animation
             Lottie.asset(
               'assets/lottie/splash.json',
               controller: _controller,

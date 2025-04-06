@@ -29,68 +29,210 @@ class AuthProvider with ChangeNotifier {
     Future.microtask(() => _init());
   }
   
-  Future<void> _init() async {
-    try {
-      // Now safe to access Firebase services
-      _authService.authStateChanges.listen((User? user) async {
-        _firebaseUser = user;
+  // Future<void> _init() async {
+  //   try {
+  //     // Now safe to access Firebase services
+  //     _authService.authStateChanges.listen((User? user) async {
+  //       _firebaseUser = user;
         
-        if (user == null) {
-          _status = AuthStatus.unauthenticated;
-          _user = null;
-        } else {
-          _status = AuthStatus.loading;
-          notifyListeners();
+  //       if (user == null) {
+  //         _status = AuthStatus.unauthenticated;
+  //         _user = null;
+  //       } else {
+  //         _status = AuthStatus.loading;
+  //         notifyListeners();
           
+  //         try {
+  //           await _fetchUserData(user.uid);
+  //           _status = AuthStatus.authenticated;
+  //         } catch (e) {
+  //           _status = AuthStatus.error;
+  //           _errorMessage = e.toString();
+  //           debugPrint('Error fetching user data: $e');
+  //         }
+  //       }
+        
+  //       notifyListeners();
+  //     });
+  //   } catch (e) {
+  //     _status = AuthStatus.error;
+  //     _errorMessage = e.toString();
+  //     debugPrint('Error in auth initialization: $e');
+  //     notifyListeners();
+  //   }
+  // }
+  // lib/providers/auth_provider.dart - modify the _init method
+
+Future<void> _init() async {
+  try {
+    _authService.authStateChanges.listen((User? user) async {
+      debugPrint('Auth state changed: ${user?.uid}');
+      _firebaseUser = user;
+      
+      if (user == null) {
+        _status = AuthStatus.unauthenticated;
+        _user = null;
+        debugPrint('AuthStatus set to: unauthenticated');
+      } else {
+        _status = AuthStatus.loading;
+        debugPrint('AuthStatus set to: loading');
+        notifyListeners();
+        
+        try {
+          // Try to get the user document
+          await _fetchUserData(user.uid);
+          _status = AuthStatus.authenticated;
+          debugPrint('AuthStatus set to: authenticated');
+        } catch (e) {
+          // Create user document if needed
+          debugPrint('Error fetching user data, creating new document: $e');
           try {
-            await _fetchUserData(user.uid);
+            final newUser = UserModel(
+              id: user.uid,
+              email: user.email ?? '',
+              displayName: user.displayName ?? 'User',
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+              isActive: true,
+            );
+            
+            await _firestoreService.createUser(newUser);
+            _user = newUser;
             _status = AuthStatus.authenticated;
-          } catch (e) {
+            debugPrint('Created new user document and authenticated');
+          } catch (createError) {
             _status = AuthStatus.error;
-            _errorMessage = e.toString();
-            debugPrint('Error fetching user data: $e');
+            _errorMessage = 'Failed to create user profile: $createError';
+            debugPrint('Failed to create user document: $createError');
           }
         }
-        
-        notifyListeners();
-      });
-    } catch (e) {
-      _status = AuthStatus.error;
-      _errorMessage = e.toString();
-      debugPrint('Error in auth initialization: $e');
+      }
+      
       notifyListeners();
-    }
+    });
+  } catch (e) {
+    _status = AuthStatus.error;
+    _errorMessage = e.toString();
+    debugPrint('Error in auth initialization: $e');
+    notifyListeners();
   }
+}
   
+  // Future<void> _fetchUserData(String userId) async {
+  //   final userModel = await _firestoreService.getUserById(userId);
+    
+  //   if (userModel != null) {
+  //     _user = userModel;
+  //   } else {
+  //     _user = null;
+  //     throw Exception('User data not found');
+  //   }
+  // }
   Future<void> _fetchUserData(String userId) async {
+  try {
     final userModel = await _firestoreService.getUserById(userId);
     
     if (userModel != null) {
       _user = userModel;
     } else {
-      _user = null;
-      throw Exception('User data not found');
+      // If user document is not found, create it from Firebase Auth data
+      final authUser = _firebaseUser;
+      if (authUser != null) {
+        final newUser = UserModel(
+          id: authUser.uid,
+          email: authUser.email ?? '',
+          displayName: authUser.displayName,
+          photoUrl: authUser.photoURL,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          isActive: true,
+        );
+        
+        await _firestoreService.createUser(newUser);
+        _user = newUser;
+      } else {
+        throw Exception('User data not found');
+      }
     }
+  } catch (e) {
+    debugPrint('Error in _fetchUserData: $e');
+    rethrow;
   }
+}
   
-  Future<void> signIn(String email, String password) async {
-    try {
-      _status = AuthStatus.loading;
-      _errorMessage = null;
-      notifyListeners();
+  // Future<void> signIn(String email, String password) async {
+  //   try {
+  //     _status = AuthStatus.loading;
+  //     _errorMessage = null;
+  //     notifyListeners();
       
-      await _authService.signInWithEmailAndPassword(email, password);
+  //     await _authService.signInWithEmailAndPassword(email, password);
       
-      // Auth state changes listener will handle updating the status
-    } catch (e) {
-      _status = AuthStatus.error;
-      _errorMessage = _authService.getReadableAuthError(e);
+  //     // Auth state changes listener will handle updating the status
+  //   } catch (e) {
+  //     _status = AuthStatus.error;
+  //     _errorMessage = _authService.getReadableAuthError(e);
+  //     notifyListeners();
+  //     throw Exception(_errorMessage);
+  //   }
+  // }
+  // In AuthProvider class
+Future<void> signIn(String email, String password) async {
+  try {
+    _status = AuthStatus.loading;
+    _errorMessage = null;
+    notifyListeners();
+    
+    // Log authentication attempt
+    debugPrint('Attempting to sign in with email: $email');
+    
+    // Authenticate with Firebase
+    final userCredential = await _authService.signInWithEmailAndPassword(
+      email, 
+      password,
+    );
+    
+    // If we get here, auth was successful
+    final user = userCredential.user;
+    
+    if (user != null) {
+      debugPrint('Successfully authenticated user: ${user.uid}');
+      
+      try {
+        // Try to fetch user data
+        await _fetchUserData(user.uid);
+        _status = AuthStatus.authenticated;
+      } catch (e) {
+        // Create user document if not found
+        debugPrint('Creating user document for new authentication: ${user.uid}');
+        
+        final newUser = UserModel(
+          id: user.uid,
+          email: user.email ?? '',
+          displayName: user.displayName ?? 'User',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          isActive: true,
+        );
+        
+        await _firestoreService.createUser(newUser);
+        _user = newUser;
+        _status = AuthStatus.authenticated;
+      }
+      
       notifyListeners();
-      throw Exception(_errorMessage);
+    } else {
+      throw Exception('Login failed - no user returned');
     }
+  } catch (e) {
+    _status = AuthStatus.error;
+    _errorMessage = e.toString();
+    notifyListeners();
+    debugPrint('Sign in error: $e');
+    throw Exception(_errorMessage);
   }
-  
-  Future<void> signUp(String email, String password, String displayName) async {
+}
+    Future<void> signUp(String email, String password, String displayName) async {
     try {
       _status = AuthStatus.loading;
       _errorMessage = null;

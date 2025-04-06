@@ -59,4 +59,8 @@ class ThemeProvider with ChangeNotifier {
         ? ThemeMode.light 
         : ThemeMode.dark);
   }
+  // In ThemeProvider class
+  Future<void> loadThemeMode() async {
+    await _loadThemeMode();
+  }
 }

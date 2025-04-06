@@ -1,315 +1,260 @@
-// lib/features/business_setup/screens/business_setup_screen.dart
+// lib/features/onboarding/screens/onboarding_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lottie/lottie.dart';
+import 'package:revboostapp/features/onboarding/models/onboarding_page_model.dart';
 import 'package:revboostapp/features/onboarding/services/onboarding_service.dart';
 import 'package:revboostapp/routing/app_router.dart';
-import 'package:revboostapp/widgets/common/app_button.dart';
 
-class BusinessSetupScreen extends StatefulWidget {
-  const BusinessSetupScreen({Key? key}) : super(key: key);
+class OnboardingScreen extends StatefulWidget {
+  const OnboardingScreen({Key? key}) : super(key: key);
 
   @override
-  State<BusinessSetupScreen> createState() => _BusinessSetupScreenState();
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
+class _OnboardingScreenState extends State<OnboardingScreen> with TickerProviderStateMixin {
   final PageController _pageController = PageController();
-  int _currentStep = 0;
+  int _currentPage = 0;
+  late AnimationController _lottieController;
   
-  // Form controllers
-  final _businessNameController = TextEditingController();
-  final _businessDescriptionController = TextEditingController();
-  
-  // Step titles
-  final List<String> _stepTitles = [
-    'Business Information',
-    'Review Platform Links',
-    'Almost Done!',
+  // Define onboarding pages - you can easily add or remove pages here
+  final List<OnboardingPageModel> _pages = [
+    const OnboardingPageModel(
+      title: 'Welcome to RevBoost',
+      description: 'Boost your online reputation with smart review management',
+      lottieAsset: 'assets/lottie/welcome.json',
+      backgroundColor: Color(0xFF2563EB),
+      textColor: Colors.white,
+    ),
+    const OnboardingPageModel(
+      title: 'Collect Reviews Effectively',
+      description: 'Redirect positive reviews to public platforms while collecting negative feedback privately',
+      lottieAsset: 'assets/lottie/reviews.json',
+      backgroundColor: Color(0xFF0D9488),
+      textColor: Colors.white,
+    ),
+    const OnboardingPageModel(
+      title: 'QR Code Integration',
+      description: 'Generate custom QR codes for customers to easily leave reviews',
+      lottieAsset: 'assets/lottie/qr_code.json',
+      backgroundColor: Color(0xFF7C3AED),
+      textColor: Colors.white,
+    ),
+    const OnboardingPageModel(
+      title: 'Insightful Analytics',
+      description: 'Track your review performance with detailed analytics and reporting',
+      lottieAsset: 'assets/lottie/analytics.json',
+      backgroundColor: Color(0xFFEF4444),
+      textColor: Colors.white,
+    ),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _lottieController = AnimationController(vsync: this);
+  }
 
   @override
   void dispose() {
     _pageController.dispose();
-    _businessNameController.dispose();
-    _businessDescriptionController.dispose();
+    _lottieController.dispose();
     super.dispose();
   }
 
-  void _nextStep() {
-    if (_currentStep < _stepTitles.length - 1) {
+  void _onNextPage() {
+    if (_currentPage < _pages.length - 1) {
       _pageController.animateToPage(
-        _currentStep + 1,
+        _currentPage + 1,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
     } else {
-      _completeSetup();
+      _completeOnboarding();
     }
   }
 
-  void _previousStep() {
-    if (_currentStep > 0) {
+  void _onPreviousPage() {
+    if (_currentPage > 0) {
       _pageController.animateToPage(
-        _currentStep - 1,
+        _currentPage - 1,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
     }
   }
 
-  Future<void> _completeSetup() async {
-    // Here you would save all the collected data to Firestore
-    // For now, we'll just mark setup as complete and navigate
-    await OnboardingService.setBusinessSetupCompleted();
+  Future<void> _completeOnboarding() async {
+    await OnboardingService.setOnboardingCompleted();
     if (mounted) {
-      context.go(AppRoutes.dashboard);
+      context.go(AppRoutes.businessSetup);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Setup Your Business (${_currentStep + 1}/${_stepTitles.length})'),
-      ),
-      body: Column(
+      body: Stack(
         children: [
-          // Progress indicator
-          LinearProgressIndicator(
-            value: (_currentStep + 1) / _stepTitles.length,
-            backgroundColor: Colors.grey[300],
-            valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
-          ),
-          
-          // Step title
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text(
-              _stepTitles[_currentStep],
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-          ),
-          
           // Page content
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(), // Disable swiping
-              onPageChanged: (int page) {
-                setState(() {
-                  _currentStep = page;
-                });
-              },
-              children: [
-                // Step 1: Business Information
-                _buildBusinessInfoStep(),
-                
-                // Step 2: Review Platform Links
-                _buildReviewPlatformsStep(),
-                
-                // Step 3: Final Step
-                _buildFinalStep(),
-              ],
+          PageView.builder(
+            controller: _pageController,
+            itemCount: _pages.length,
+            onPageChanged: (int page) {
+              setState(() {
+                _currentPage = page;
+              });
+            },
+            itemBuilder: (context, index) {
+              final page = _pages[index];
+              
+              return Container(
+                color: page.backgroundColor,
+                child: SafeArea(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Spacer(),
+                      // Lottie animation
+                      Lottie.asset(
+                        page.lottieAsset,
+                        controller: _lottieController,
+                        onLoaded: (composition) {
+                          _lottieController
+                            ..duration = composition.duration
+                            ..repeat();
+                        },
+                        width: MediaQuery.of(context).size.width * 0.8,
+                        height: MediaQuery.of(context).size.width * 0.8,
+                      ),
+                      const SizedBox(height: 40),
+                      // Title
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                        child: Text(
+                          page.title,
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            color: page.textColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      // Description
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                        child: Text(
+                          page.description,
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: page.textColor.withOpacity(0.9),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      const Spacer(),
+                      const SizedBox(height: 80), // Space for navigation buttons
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+          
+          // Page indicator
+          Positioned(
+            bottom: 130,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                _pages.length,
+                (index) => AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  height: 8,
+                  width: _currentPage == index ? 24 : 8,
+                  decoration: BoxDecoration(
+                    color: _currentPage == index 
+                        ? Colors.white 
+                        : Colors.white.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
             ),
           ),
           
           // Navigation buttons
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Back button
-                _currentStep > 0
-                    ? TextButton.icon(
-                        onPressed: _previousStep,
-                        icon: const Icon(Icons.arrow_back),
-                        label: const Text('Back'),
-                      )
-                    : const SizedBox(width: 100),
-                
-                // Next/Finish button
-                AppButton(
-                  text: _currentStep < _stepTitles.length - 1 ? 'Next' : 'Finish',
-                  onPressed: _nextStep,
-                  icon: Icons.arrow_forward,
-                  type: AppButtonType.primary,
-                ),
-              ],
+          Positioned(
+            bottom: 40,
+            left: 0,
+            right: 0,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Previous button
+                  _currentPage > 0
+                      ? TextButton.icon(
+                          onPressed: _onPreviousPage,
+                          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                          label: const Text(
+                            'Previous',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        )
+                      : const SizedBox(width: 100),
+                  
+                  // Skip button or Next button
+                  _currentPage < _pages.length - 1
+                      ? Row(
+                          children: [
+                            TextButton(
+                              onPressed: _completeOnboarding,
+                              child: const Text(
+                                'Skip',
+                                style: TextStyle(color: Colors.white70),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton.icon(
+                              onPressed: _onNextPage,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: _pages[_currentPage].backgroundColor,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                              ),
+                              icon: const Text('Next'),
+                              label: const Icon(Icons.arrow_forward_rounded),
+                            ),
+                          ],
+                        )
+                      : ElevatedButton.icon(
+                          onPressed: _completeOnboarding,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: _pages[_currentPage].backgroundColor,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                          ),
+                          icon: const Text('Get Started'),
+                          label: const Icon(Icons.arrow_forward_rounded),
+                        ),
+                ],
+              ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildBusinessInfoStep() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Tell us about your business',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 24),
-          
-          // Business name field
-          TextField(
-            controller: _businessNameController,
-            decoration: const InputDecoration(
-              labelText: 'Business Name',
-              hintText: 'Enter your business name',
-              prefixIcon: Icon(Icons.business),
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          // Business description field
-          TextField(
-            controller: _businessDescriptionController,
-            maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: 'Business Description',
-              hintText: 'Tell your customers about your business...',
-              alignLabelWithHint: true,
-            ),
-          ),
-          const SizedBox(height: 24),
-          
-          // Logo upload
-          Center(
-            child: Column(
-              children: [
-                Container(
-                  width: 150,
-                  height: 150,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey[400]!),
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.add_photo_alternate_outlined,
-                      size: 40,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextButton.icon(
-                  onPressed: () {
-                    // Implement logo upload functionality
-                  },
-                  icon: const Icon(Icons.upload),
-                  label: const Text('Upload Logo'),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReviewPlatformsStep() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Connect your review platforms',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Enter your business profile links to help customers leave reviews on your preferred platforms.',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 24),
-          
-          // Google Business Profile
-          _buildPlatformLinkField(
-            platform: 'Google Business Profile',
-            icon: Icons.g_mobiledata,
-            hintText: 'https://g.page/r/example',
-          ),
-          const SizedBox(height: 16),
-          
-          // Yelp
-          _buildPlatformLinkField(
-            platform: 'Yelp',
-            icon: Icons.restaurant_menu,
-            hintText: 'https://www.yelp.com/biz/example',
-          ),
-          const SizedBox(height: 16),
-          
-          // Facebook
-          _buildPlatformLinkField(
-            platform: 'Facebook',
-            icon: Icons.facebook,
-            hintText: 'https://www.facebook.com/example',
-          ),
-          
-          const SizedBox(height: 24),
-          Center(
-            child: TextButton.icon(
-              onPressed: () {
-                // Add more platforms functionality
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Add Another Platform'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPlatformLinkField({
-    required String platform,
-    required IconData icon,
-    required String hintText,
-  }) {
-    return TextField(
-      decoration: InputDecoration(
-        labelText: platform,
-        hintText: hintText,
-        prefixIcon: Icon(icon),
-      ),
-    );
-  }
-
-  Widget _buildFinalStep() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.check_circle_outline,
-              size: 80,
-              color: Colors.green,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Almost there!',
-              style: Theme.of(context).textTheme.headlineMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Your business profile is ready to be created. Click "Finish" to complete the setup and start collecting reviews.',
-              style: Theme.of(context).textTheme.bodyLarge,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
       ),
     );
   }

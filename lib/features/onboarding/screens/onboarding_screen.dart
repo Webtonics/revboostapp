@@ -1,5 +1,3 @@
-// lib/features/onboarding/screens/onboarding_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
@@ -29,8 +27,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
       textColor: Colors.white,
     ),
     const OnboardingPageModel(
-      title: 'Collect Reviews Effectively',
-      description: 'Redirect positive reviews to public platforms while collecting negative feedback privately',
+      title: 'Filter Reviews',
+      description: 'Shield your business: we filter bad reviews before they go public.',
       lottieAsset: 'assets/lottie/reviews.json',
       backgroundColor: Color(0xFF0D9488),
       textColor: Colors.white,
@@ -95,6 +93,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
 
   @override
   Widget build(BuildContext context) {
+    // Get screen dimensions
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.height < 700;
+    
     return Scaffold(
       body: Stack(
         children: [
@@ -113,50 +115,79 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
               return Container(
                 color: page.backgroundColor,
                 child: SafeArea(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Spacer(),
-                      // Lottie animation
-                      Lottie.asset(
-                        page.lottieAsset,
-                        controller: _lottieController,
-                        onLoaded: (composition) {
-                          _lottieController
-                            ..duration = composition.duration
-                            ..repeat();
-                        },
-                        width: MediaQuery.of(context).size.width * 0.8,
-                        height: MediaQuery.of(context).size.width * 0.8,
-                      ),
-                      const SizedBox(height: 40),
-                      // Title
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                        child: Text(
-                          page.title,
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            color: page.textColor,
-                            fontWeight: FontWeight.bold,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      // Calculate responsive sizes
+                      final lottieSize = isSmallScreen ? constraints.maxWidth * 0.4 : constraints.maxWidth * 0.8;
+                      final paddingHorizontal = constraints.maxWidth * 0.05;
+                      
+                      return SingleChildScrollView(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: constraints.maxHeight,
                           ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      // Description
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                        child: Text(
-                          page.description,
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: page.textColor.withOpacity(0.9),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(height: isSmallScreen ? 20 : 40),
+                              
+                              // Lottie animation with responsive sizing
+                              SizedBox(
+                                height: isSmallScreen ? lottieSize * 0.8 : lottieSize ,
+                                child: Container(
+                                
+                                  child: Lottie.asset(
+                                    page.lottieAsset,
+                                    controller: _lottieController,
+                                    onLoaded: (composition) {
+                                      _lottieController
+                                        ..duration = composition.duration
+                                        ..repeat();
+                                    },
+                                    width: lottieSize,
+                                    height: lottieSize,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                              ),
+                              
+                              SizedBox(height: isSmallScreen ? 16 : 24),
+                              
+                              // Title
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: paddingHorizontal),
+                                child: Text(
+                                  page.title,
+                                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                    color: page.textColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: isSmallScreen ? 24 : 28,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              
+                              SizedBox(height: isSmallScreen ? 16 : 24),
+                              
+                              // Description
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: paddingHorizontal + 10),
+                                child: Text(
+                                  page.description,
+                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: page.textColor.withOpacity(0.9),
+                                    fontSize: isSmallScreen ? 14 : 16,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              
+                              SizedBox(height: isSmallScreen ? 60 : 100),
+                            ],
                           ),
-                          textAlign: TextAlign.center,
                         ),
-                      ),
-                      const Spacer(),
-                      const SizedBox(height: 80), // Space for navigation buttons
-                    ],
+                      );
+                    },
                   ),
                 ),
               );
@@ -165,7 +196,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
           
           // Page indicator
           Positioned(
-            bottom: 130,
+            bottom: isSmallScreen ? 50 : 60,
             left: 0,
             right: 0,
             child: Row(
@@ -190,72 +221,112 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
           
           // Navigation buttons
           Positioned(
-            bottom: 40,
+            bottom: 0,
             left: 0,
             right: 0,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Previous button
-                  _currentPage > 0
-                      ? TextButton.icon(
-                          onPressed: _onPreviousPage,
-                          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-                          label: const Text(
-                            'Previous',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        )
-                      : const SizedBox(width: 100),
-                  
-                  // Skip button or Next button
-                  _currentPage < _pages.length - 1
-                      ? Row(
-                          children: [
-                            TextButton(
-                              onPressed: _completeOnboarding,
-                              child: const Text(
-                                'Skip',
-                                style: TextStyle(color: Colors.white70),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            ElevatedButton.icon(
-                              onPressed: _onNextPage,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: _pages[_currentPage].backgroundColor,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                              ),
-                              icon: const Text('Next'),
-                              label: const Icon(Icons.arrow_forward_rounded),
-                            ),
-                          ],
-                        )
-                      : ElevatedButton.icon(
-                          onPressed: _completeOnboarding,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: _pages[_currentPage].backgroundColor,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
-                          ),
-                          icon: const Text('Get Started'),
-                          label: const Icon(Icons.arrow_forward_rounded),
-                        ),
-                ],
+            child: SafeArea(
+              minimum: const EdgeInsets.only(bottom: 8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: ResponsiveNavigationButtons(
+                  currentPage: _currentPage,
+                  pagesLength: _pages.length,
+                  backgroundColor: _pages[_currentPage].backgroundColor,
+                  onPrevious: _onPreviousPage,
+                  onNext: _onNextPage,
+                  onComplete: _completeOnboarding,
+                ),
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+// Extracted navigation buttons into a separate widget for better organization
+class ResponsiveNavigationButtons extends StatelessWidget {
+  final int currentPage;
+  final int pagesLength;
+  final Color backgroundColor;
+  final VoidCallback onPrevious;
+  final VoidCallback onNext;
+  final VoidCallback onComplete;
+
+  const ResponsiveNavigationButtons({
+    Key? key,
+    required this.currentPage,
+    required this.pagesLength,
+    required this.backgroundColor,
+    required this.onPrevious,
+    required this.onNext,
+    required this.onComplete,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isNarrow = screenWidth < 360;
+    
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // Previous button
+        currentPage > 0
+            ? TextButton.icon(
+                onPressed: onPrevious,
+                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                label: isNarrow 
+                    ? const SizedBox.shrink() 
+                    : const Text(
+                        'Previous',
+                        style: TextStyle(color: Colors.white),
+                      ),
+              )
+            : SizedBox(width: isNarrow ? 40 : 100),
+        
+        // Skip button or Next button
+        currentPage < pagesLength - 1
+            ? Row(
+                children: [
+                  TextButton(
+                    onPressed: onComplete,
+                    child: const Text(
+                      'Skip',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: onNext,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: backgroundColor,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isNarrow ? 12 : 16,
+                        vertical: 12,
+                      ),
+                    ),
+                    icon: const Text('Next'),
+                    label: const Icon(Icons.arrow_forward_rounded),
+                  ),
+                ],
+              )
+            : ElevatedButton.icon(
+                onPressed: onComplete,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: backgroundColor,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isNarrow ? 16 : 24,
+                    vertical: 12,
+                  ),
+                ),
+                icon: const Text('Get Started'),
+                label: const Icon(Icons.arrow_forward_rounded),
+              ),
+      ],
     );
   }
 }

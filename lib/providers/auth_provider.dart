@@ -315,4 +315,51 @@ Future<void> signIn(String email, String password) async {
       throw Exception(_errorMessage);
     }
   }
+  // In your AuthProvider class, add a method to persist authentication
+Future<void> persistAuthState() async {
+  if (_firebaseUser != null) {
+    try {
+      // Get the current user from Firebase Auth
+      final currentUser = _authService.currentUser;
+      if (currentUser != null) {
+        _firebaseUser = currentUser;
+        await _fetchUserData(currentUser.uid);
+        _status = AuthStatus.authenticated;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error persisting auth state: $e');
+    }
+  }
+}
+// Add this method to your AuthProvider class
+
+Future<void> reloadAuthState() async {
+  try {
+    final currentUser = _authService.currentUser;
+    if (currentUser != null) {
+      _firebaseUser = currentUser;
+      _status = AuthStatus.authenticated;
+      
+      try {
+        await _fetchUserData(currentUser.uid);
+      } catch (e) {
+        // If user document not found but we have Firebase auth,
+        // consider them authenticated anyway
+        debugPrint('Error fetching user data, but Firebase user exists: $e');
+      }
+      
+      notifyListeners();
+      debugPrint('Auth state reloaded: Authenticated');
+    } else {
+      _status = AuthStatus.unauthenticated;
+      _firebaseUser = null;
+      _user = null;
+      notifyListeners();
+      debugPrint('Auth state reloaded: Unauthenticated');
+    }
+  } catch (e) {
+    debugPrint('Error reloading auth state: $e');
+  }
+}
 }

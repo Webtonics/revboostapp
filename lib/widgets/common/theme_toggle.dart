@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:revboostapp/providers/auth_provider.dart';
 import 'package:revboostapp/providers/theme_provider.dart';
 
 class ThemeToggle extends StatelessWidget {
@@ -21,7 +22,7 @@ class ThemeToggle extends StatelessWidget {
     
     return InkWell(
       borderRadius: BorderRadius.circular(20),
-      onTap: () => themeProvider.toggleTheme(),
+      onTap: () => _toggleTheme(context),
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Row(
@@ -57,5 +58,23 @@ class ThemeToggle extends StatelessWidget {
         ),
       ),
     );
+  }
+  
+  void _toggleTheme(BuildContext context) {
+    // Capture the auth status before theme change
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final authStatus = authProvider.status;
+    final user = authProvider.firebaseUser;
+    
+    // Toggle theme
+    Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
+    
+    // Ensure auth state is preserved
+    Future.microtask(() {
+      if (user != null && authStatus == AuthStatus.authenticated) {
+        // If we were authenticated, make sure we stay that way
+        authProvider.reloadAuthState();
+      }
+    });
   }
 }

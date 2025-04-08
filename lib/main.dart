@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:revboostapp/core/services/firebase_service.dart';
 import 'package:revboostapp/core/theme/app_theme.dart';
 import 'package:revboostapp/providers/auth_provider.dart';
+import 'package:revboostapp/providers/business_setup_provider.dart';
 import 'package:revboostapp/providers/theme_provider.dart';
 import 'package:revboostapp/routing/app_router.dart';
 
@@ -26,6 +27,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => BusinessSetupProvider()),
       ],
       child: Builder(
         builder: (context) {

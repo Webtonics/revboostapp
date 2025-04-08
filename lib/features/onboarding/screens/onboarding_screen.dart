@@ -84,12 +84,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
     }
   }
 
-  Future<void> _completeOnboarding() async {
-    await OnboardingService.setOnboardingCompleted();
-    if (mounted) {
-      context.go(AppRoutes.businessSetup);
-    }
+  void _completeOnboarding() async {
+  await OnboardingService.setOnboardingCompleted();
+  
+  if (mounted) {
+    // Navigate to business setup next
+    context.go(AppRoutes.businessSetup);
   }
+}
 
   @override
   Widget build(BuildContext context) {

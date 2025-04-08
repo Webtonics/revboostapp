@@ -7,6 +7,7 @@ import 'package:revboostapp/features/auth/screens/login_screen.dart';
 import 'package:revboostapp/features/auth/screens/register_screen.dart';
 import 'package:revboostapp/features/business_setup/screens/business_setup_screen.dart';
 import 'package:revboostapp/features/onboarding/screens/onboarding_screen.dart';
+import 'package:revboostapp/features/onboarding/services/onboarding_service.dart';
 import 'package:revboostapp/features/splash/screens/splash_screen.dart';
 import 'package:revboostapp/providers/auth_provider.dart';
 import 'package:revboostapp/widgets/layout/app_bar_with_theme_toggle.dart';
@@ -53,6 +54,7 @@ class PlaceholderScreen extends StatelessWidget {
             ElevatedButton(
               onPressed: () {
                 context.read<AuthProvider>().signOut();
+                context.go( AppRoutes.splash);
               },
               child: const Text('Sign Out (Test)'),
             ),
@@ -72,53 +74,88 @@ class AppRouter {
       initialLocation: AppRoutes.splash,
       debugLogDiagnostics: true,
       
-      redirect: (context, state) {
-        // Get auth provider without listening to it
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        final currentPath = state.matchedLocation;
-        
-        debugPrint('GoRouter redirect: path=$currentPath, auth=${authProvider.status}');
-        
-        // Always allow access to splash screen
-        if (currentPath == AppRoutes.splash) {
-          debugPrint('Allowing access to splash screen');
-          return null;
-        }
-        
-        // Always allow access to public review pages
-        if (currentPath.startsWith('/r/')) {
-          debugPrint('Allowing access to review page');
-          return null;
-        }
-        
-        // During loading, don't redirect
-        if (authProvider.status == AuthStatus.loading || 
-            authProvider.status == AuthStatus.initial) {
-          debugPrint('Auth is loading or initial, not redirecting');
-          return null;
-        }
-        
-        // Check if on an auth page
-        final isOnAuthPage = 
-            currentPath == AppRoutes.login || 
-            currentPath == AppRoutes.register || 
-            currentPath == AppRoutes.forgotPassword;
-        
-        // If not authenticated and not on an auth page, go to login
-        if (authProvider.status == AuthStatus.unauthenticated) {
-          debugPrint('Not authenticated, redirecting to login');
-          return isOnAuthPage ? null : AppRoutes.login;
-        }
-        
-        // If authenticated but on an auth page, go to onboarding
-        if (authProvider.status == AuthStatus.authenticated && isOnAuthPage) {
-          debugPrint('Authenticated but on auth page, redirecting to onboarding');
-          return AppRoutes.onboarding;
-        }
-        
-        // In all other cases, allow navigation
-        return null;
-      },
+      // Update redirect in app_router.dart
+
+  // In your app_router.dart redirect method:
+// In app_router.dart
+redirect: (context, state) async {
+  // Get auth provider
+  final authProvider = Provider.of<AuthProvider>(context, listen: false);
+  final currentPath = state.matchedLocation;
+  
+  // Don't redirect during loading or on splash
+  if (authProvider.status == AuthStatus.loading || 
+      authProvider.status == AuthStatus.initial ||
+      currentPath == AppRoutes.splash) {
+    return null;
+  }
+  
+  // Always allow public review pages
+  if (currentPath.startsWith('/r/')) {
+    return null;
+  }
+  
+  // Check auth status
+  final isAuthenticated = authProvider.status == AuthStatus.authenticated;
+  final user = authProvider.user;
+  
+  // Check if on auth-related page
+  final isOnAuthPage = 
+      currentPath == AppRoutes.login || 
+      currentPath == AppRoutes.register || 
+      currentPath == AppRoutes.forgotPassword;
+  
+  // Not logged in -> go to login
+  if (!isAuthenticated) {
+    return isOnAuthPage ? null : AppRoutes.login;
+  }
+  
+  // Check for onboarding and business setup completion
+  final onboardingCompleted = await OnboardingService.isOnboardingCompleted();
+  final businessSetupCompleted = user?.hasCompletedSetup ?? false;
+  
+  // Determine where to send the authenticated user
+  if (isOnAuthPage) {
+    // If logged in but on auth page, where to go next?
+    if (!onboardingCompleted) {
+      return AppRoutes.onboarding;
+    } else if (!businessSetupCompleted) {
+      return AppRoutes.businessSetup;
+    } else {
+      return AppRoutes.dashboard;
+    }
+  }
+  
+  // Handle other cases
+  if (currentPath == AppRoutes.onboarding) {
+    if (onboardingCompleted) {
+      return businessSetupCompleted 
+          ? AppRoutes.dashboard 
+          : AppRoutes.businessSetup;
+    }
+    return null; // Allow access to onboarding if not completed
+  }
+  
+  if (currentPath == AppRoutes.businessSetup) {
+    if (businessSetupCompleted) {
+      return AppRoutes.dashboard;
+    }
+    if (!onboardingCompleted) {
+      return AppRoutes.onboarding;
+    }
+    return null; // Allow access to business setup if onboarding completed
+  }
+  
+  // If trying to access dashboard or other protected routes
+  if (!onboardingCompleted) {
+    return AppRoutes.onboarding;
+  } else if (!businessSetupCompleted) {
+    return AppRoutes.businessSetup;
+  }
+  
+  // Allow access to all other routes for authenticated users
+  return null;
+},
       
       routes: [
         GoRoute(

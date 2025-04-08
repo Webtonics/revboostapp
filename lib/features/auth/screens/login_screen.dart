@@ -101,7 +101,7 @@ Future<void> _handleLogin() async {
 
   @override
   Widget build(BuildContext context) {
-    final _theme = context.read<ThemeProvider>();
+    final theme = context.read<ThemeProvider>();
     return Scaffold(
       body: LoadingOverlay(
         isLoading: _isLoading,
@@ -120,7 +120,7 @@ Future<void> _handleLogin() async {
                       Column(
                         children: [
                           Image.asset(
-                            _theme.isDarkMode  ? 'assets/splash_logo_dark.png' : 'assets/splash_logo_light.png', 
+                            theme.isDarkMode  ? 'assets/splash_logo_dark.png' : 'assets/splash_logo_light.png', 
                           
                           width: 100, height: 100),
                           const SizedBox(height: 16),

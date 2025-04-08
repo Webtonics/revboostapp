@@ -29,39 +29,6 @@ class AuthProvider with ChangeNotifier {
     Future.microtask(() => _init());
   }
   
-  // Future<void> _init() async {
-  //   try {
-  //     // Now safe to access Firebase services
-  //     _authService.authStateChanges.listen((User? user) async {
-  //       _firebaseUser = user;
-        
-  //       if (user == null) {
-  //         _status = AuthStatus.unauthenticated;
-  //         _user = null;
-  //       } else {
-  //         _status = AuthStatus.loading;
-  //         notifyListeners();
-          
-  //         try {
-  //           await _fetchUserData(user.uid);
-  //           _status = AuthStatus.authenticated;
-  //         } catch (e) {
-  //           _status = AuthStatus.error;
-  //           _errorMessage = e.toString();
-  //           debugPrint('Error fetching user data: $e');
-  //         }
-  //       }
-        
-  //       notifyListeners();
-  //     });
-  //   } catch (e) {
-  //     _status = AuthStatus.error;
-  //     _errorMessage = e.toString();
-  //     debugPrint('Error in auth initialization: $e');
-  //     notifyListeners();
-  //   }
-  // }
-  // lib/providers/auth_provider.dart - modify the _init method
 
 Future<void> _init() async {
   try {
@@ -118,24 +85,15 @@ Future<void> _init() async {
   }
 }
   
-  // Future<void> _fetchUserData(String userId) async {
-  //   final userModel = await _firestoreService.getUserById(userId);
-    
-  //   if (userModel != null) {
-  //     _user = userModel;
-  //   } else {
-  //     _user = null;
-  //     throw Exception('User data not found');
-  //   }
-  // }
-  Future<void> _fetchUserData(String userId) async {
+  // In your _fetchUserData method or wherever you load user data:
+Future<void> _fetchUserData(String userId) async {
   try {
-    final userModel = await _firestoreService.getUserById(userId);
+    final userDoc = await _firestoreService.getUserById(userId);
     
-    if (userModel != null) {
-      _user = userModel;
+    if (userDoc != null) {
+      _user = userDoc;
     } else {
-      // If user document is not found, create it from Firebase Auth data
+      // If user document doesn't exist, create a new one with setup not completed
       final authUser = _firebaseUser;
       if (authUser != null) {
         final newUser = UserModel(
@@ -146,6 +104,7 @@ Future<void> _init() async {
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
           isActive: true,
+          hasCompletedSetup: false, // Important: default to false
         );
         
         await _firestoreService.createUser(newUser);
@@ -155,7 +114,7 @@ Future<void> _init() async {
       }
     }
   } catch (e) {
-    debugPrint('Error in _fetchUserData: $e');
+    debugPrint('Error fetching user data: $e');
     rethrow;
   }
 }

@@ -129,7 +129,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               Expanded(
                                 child: Text(
                                   _errorMessage!,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     color: AppColors.error,
                                   ),
                                 ),

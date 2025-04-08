@@ -27,8 +27,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
       textColor: Colors.white,
     ),
     const OnboardingPageModel(
-      title: 'Filter Reviews',
-      description: 'Shield your business: we filter bad reviews before they go public.',
+      title: 'Shield your business',
+      description: ' Filter bad reviews before they go public.',
       lottieAsset: 'assets/lottie/reviews.json',
       backgroundColor: Color(0xFF0D9488),
       textColor: Colors.white,

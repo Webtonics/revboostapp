@@ -59,6 +59,13 @@ dependencies:
   lottie: ^3.3.1
   file_picker: ^10.0.0
   image_picker_web: ^4.0.0
+  universal_html: ^2.2.4
+  share_plus: ^10.1.4
+  fl_chart: ^0.70.2
+  url_strategy: ^0.3.0
+  
+  
+  
   
   
 dev_dependencies:
@@ -98,6 +105,7 @@ flutter:
   assets:
     - assets/lottie/
     - assets/icons/
+    - assets/images/
     - assets/
 
   #   - images/a_dot_ham.jpeg

@@ -1,4 +1,4 @@
-// // lib/models/user_model.dart
+// // Modify lib/models/user_model.dart to add business setup fields
 
 // import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -12,6 +12,8 @@
 //   final bool isActive;
 //   final String? subscriptionStatus;
 //   final DateTime? subscriptionEndDate;
+//   final bool hasCompletedSetup;  // Added field
+//   final List<String> businessIds;  // Added field
   
 //   const UserModel({
 //     required this.id,
@@ -23,6 +25,8 @@
 //     this.isActive = true,
 //     this.subscriptionStatus,
 //     this.subscriptionEndDate,
+//     this.hasCompletedSetup = false,  // Default to false
+//     this.businessIds = const [],  // Default to empty list
 //   });
   
 //   factory UserModel.fromFirestore(DocumentSnapshot doc) {
@@ -40,6 +44,8 @@
 //       subscriptionEndDate: data['subscriptionEndDate'] != null
 //           ? (data['subscriptionEndDate'] as Timestamp).toDate()
 //           : null,
+//       hasCompletedSetup: data['hasCompletedSetup'] ?? false,
+//       businessIds: List<String>.from(data['businessIds'] ?? []),
 //     );
 //   }
   
@@ -55,6 +61,8 @@
 //       'subscriptionEndDate': subscriptionEndDate != null
 //           ? Timestamp.fromDate(subscriptionEndDate!)
 //           : null,
+//       'hasCompletedSetup': hasCompletedSetup,
+//       'businessIds': businessIds,
 //     };
 //   }
   
@@ -65,6 +73,8 @@
 //     String? subscriptionStatus,
 //     DateTime? subscriptionEndDate,
 //     DateTime? updatedAt,
+//     bool? hasCompletedSetup,
+//     List<String>? businessIds,
 //   }) {
 //     return UserModel(
 //       id: id,
@@ -76,11 +86,12 @@
 //       isActive: isActive ?? this.isActive,
 //       subscriptionStatus: subscriptionStatus ?? this.subscriptionStatus,
 //       subscriptionEndDate: subscriptionEndDate ?? this.subscriptionEndDate,
+//       hasCompletedSetup: hasCompletedSetup ?? this.hasCompletedSetup,
+//       businessIds: businessIds ?? this.businessIds,
 //     );
 //   }
 // }
-
-// Modify lib/models/user_model.dart to add business setup fields
+// lib/models/user_model.dart (update)
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -94,8 +105,10 @@ class UserModel {
   final bool isActive;
   final String? subscriptionStatus;
   final DateTime? subscriptionEndDate;
-  final bool hasCompletedSetup;  // Added field
-  final List<String> businessIds;  // Added field
+  final bool hasCompletedSetup;
+  final List<String> businessIds;
+  final String? phoneNumber;
+  final Map<String, dynamic>? notificationSettings;
   
   const UserModel({
     required this.id,
@@ -107,8 +120,10 @@ class UserModel {
     this.isActive = true,
     this.subscriptionStatus,
     this.subscriptionEndDate,
-    this.hasCompletedSetup = false,  // Default to false
-    this.businessIds = const [],  // Default to empty list
+    this.hasCompletedSetup = false,
+    this.businessIds = const [],
+    this.phoneNumber,
+    this.notificationSettings,
   });
   
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
@@ -128,6 +143,8 @@ class UserModel {
           : null,
       hasCompletedSetup: data['hasCompletedSetup'] ?? false,
       businessIds: List<String>.from(data['businessIds'] ?? []),
+      phoneNumber: data['phoneNumber'],
+      notificationSettings: data['notificationSettings'] as Map<String, dynamic>?,
     );
   }
   
@@ -145,6 +162,8 @@ class UserModel {
           : null,
       'hasCompletedSetup': hasCompletedSetup,
       'businessIds': businessIds,
+      'phoneNumber': phoneNumber,
+      'notificationSettings': notificationSettings,
     };
   }
   
@@ -157,6 +176,8 @@ class UserModel {
     DateTime? updatedAt,
     bool? hasCompletedSetup,
     List<String>? businessIds,
+    String? phoneNumber,
+    Map<String, dynamic>? notificationSettings,
   }) {
     return UserModel(
       id: id,
@@ -170,6 +191,8 @@ class UserModel {
       subscriptionEndDate: subscriptionEndDate ?? this.subscriptionEndDate,
       hasCompletedSetup: hasCompletedSetup ?? this.hasCompletedSetup,
       businessIds: businessIds ?? this.businessIds,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      notificationSettings: notificationSettings ?? this.notificationSettings,
     );
   }
 }

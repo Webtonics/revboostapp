@@ -6,11 +6,16 @@ import 'package:revboostapp/features/auth/screens/forgot_password_screen.dart';
 import 'package:revboostapp/features/auth/screens/login_screen.dart';
 import 'package:revboostapp/features/auth/screens/register_screen.dart';
 import 'package:revboostapp/features/business_setup/screens/business_setup_screen.dart';
+import 'package:revboostapp/features/dashboard/screens/dashboard_screen.dart';
 import 'package:revboostapp/features/onboarding/screens/onboarding_screen.dart';
 import 'package:revboostapp/features/onboarding/services/onboarding_service.dart';
+import 'package:revboostapp/features/qr_code/screens/qr_code_screen.dart';
+import 'package:revboostapp/features/reviews/screens/public_review_screen.dart';
+import 'package:revboostapp/features/settings/settings_screen.dart';
 import 'package:revboostapp/features/splash/screens/splash_screen.dart';
 import 'package:revboostapp/providers/auth_provider.dart';
 import 'package:revboostapp/widgets/layout/app_bar_with_theme_toggle.dart';
+import 'package:revboostapp/widgets/layout/app_layout.dart';
 
 // Define routes
 class AppRoutes {
@@ -184,37 +189,37 @@ redirect: (context, state) async {
         ),
         GoRoute(
           path: AppRoutes.dashboard,
-          builder: (context, state) => const PlaceholderScreen(title: 'Dashboard'),
+          builder: (context, state) => const  DashboardScreen(),
         ),
         GoRoute(
           path: AppRoutes.reviewRequests,
-          builder: (context, state) => const PlaceholderScreen(title: 'Review Requests'),
+          builder: (context, state) => const AppLayout(title: "Review Requests", child:   PlaceholderScreen(title: 'Review Requests')),
         ),
         GoRoute(
           path: AppRoutes.contacts,
-          builder: (context, state) => const PlaceholderScreen(title: 'Contacts'),
+          builder: (context, state) => const AppLayout(title: "Contacts", child:   PlaceholderScreen(title: 'Contacts')), 
         ),
         GoRoute(
           path: AppRoutes.qrCode,
-          builder: (context, state) => const PlaceholderScreen(title: 'QR Code'),
+          builder: (context, state) => const QrCodeScreen(),
         ),
         GoRoute(
           path: AppRoutes.templates,
-          builder: (context, state) => const PlaceholderScreen(title: 'Templates'),
+          builder: (context, state) => const AppLayout(title: "Templates", child:   PlaceholderScreen(title: 'Templates')),
         ),
         GoRoute(
           path: AppRoutes.settings,
-          builder: (context, state) => const PlaceholderScreen(title: 'Settings'),
+          builder: (context, state) =>const SettingsScreen(),
         ),
         GoRoute(
           path: AppRoutes.subscription,
-          builder: (context, state) => const PlaceholderScreen(title: 'Subscription'),
+          builder: (context, state) => const AppLayout(title: "Subscription", child:   PlaceholderScreen(title: 'Subscription')),
         ),
         GoRoute(
           path: AppRoutes.reviewPage,
           builder: (context, state) {
             final businessId = state.pathParameters['businessId'] ?? '';
-            return PlaceholderScreen(title: 'Review Page for $businessId');
+            return PublicReviewScreen(businessId: businessId);
           },
         ),
       ],

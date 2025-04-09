@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:revboostapp/core/theme/app_colors.dart';
 import 'package:revboostapp/providers/auth_provider.dart';
+import 'package:revboostapp/routing/app_router.dart';
 import 'package:revboostapp/widgets/common/app_button.dart';
 import 'package:revboostapp/widgets/common/loading_overlay.dart';
 
@@ -49,6 +50,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         _isSuccess = true;
         _isLoading = false;
       });
+
+
     } catch (e) {
       setState(() {
         _errorMessage = e.toString();
@@ -212,7 +215,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               // Back to login button
                               TextButton(
                                 onPressed: () {
-                                  context.pop();
+                                  context.go(AppRoutes.login);
                                 },
                                 child: const Text('Back to Login'),
                               ),

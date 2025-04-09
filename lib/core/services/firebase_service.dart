@@ -81,4 +81,5 @@ class FirebaseService {
   Future<void> deleteFile(String path) async {
     await storage.ref(path).delete();
   }
+
 }

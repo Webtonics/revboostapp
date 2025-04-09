@@ -343,12 +343,12 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
     setState(() {
       _isLoading = false;
     });
-    if (!mounted) return;
+    // if (!mounted) return;
     context.go(AppRoutes.dashboard);
-    // if (mounted) {
-    //   // Navigate directly to dashboard
-    //   context.go(AppRoutes.dashboard);
-    // }
+    if (mounted) {
+      // Navigate directly to dashboard
+      context.go(AppRoutes.dashboard);
+    }
   } catch (e) {
     setState(() {
       _isLoading = false;

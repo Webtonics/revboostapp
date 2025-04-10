@@ -549,8 +549,10 @@
 // }
 // lib/features/dashboard/screens/dashboard_screen.dart - simplified
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:revboostapp/providers/dashboard_provider.dart';
+import 'package:revboostapp/routing/app_router.dart';
 import 'package:revboostapp/widgets/layout/app_layout.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -711,9 +713,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   icon = Icons.link;
                               }
                               
-                              return Chip(
-                                avatar: Icon(icon, size: 16),
-                                label: Text(entry.key),
+                              return GestureDetector(
+                                onTap: () => context.go(AppRoutes.settings),
+                                child: Chip(
+                                  avatar: Icon(icon, size: 16),
+                                  label: Text(entry.key),
+                                  
+                                ),
                               );
                             }).toList(),
                           ),
@@ -738,41 +744,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   crossAxisCount: _getColumnCount(context),
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 4,
+                  mainAxisSpacing: 4,
                   childAspectRatio: 1.3,
                   children: [
                     _buildActionCard(
                       context,
                       'View QR Code',
-                      'Generate and print QR codes',
+                      // 'Generate and print QR codes',
                       Icons.qr_code,
                       Colors.purple,
-                      () => Navigator.pushNamed(context, '/qr-code'),
+                      () => context.go(AppRoutes.qrCode),
                     ),
                     _buildActionCard(
                       context,
                       'Send Review Request',
-                      'Email or SMS to customers',
+                      // 'Email or SMS to customers',
                       Icons.send,
                       Colors.blue,
-                      () => Navigator.pushNamed(context, '/review-requests'),
+                      () => context.go(AppRoutes.reviewRequests),
                     ),
                     _buildActionCard(
                       context,
-                      'Manage Contacts',
-                      'Add or import contacts',
+                      'Manage Account',
+                      // 'Update business details',
                       Icons.people,
                       Colors.orange,
-                      () => Navigator.pushNamed(context, '/contacts'),
+                      () =>context.go(AppRoutes.settings),
                     ),
                     _buildActionCard(
                       context,
-                      'Review Templates',
-                      'Customize your messages',
-                      Icons.description,
+                      'Manage Subscriptions',
+                      // 'Manage your subscriptions',
+                      Icons.subscriptions,
+                      // Icons.description,
                       Colors.green,
-                      () => Navigator.pushNamed(context, '/templates'),
+                      () => context.go(AppRoutes.subscription),
                     ),
                   ],
                 ),
@@ -792,7 +799,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildActionCard(
     BuildContext context,
     String title,
-    String subtitle,
+    // String subtitle,
     IconData icon,
     Color color,
     VoidCallback onTap,
@@ -803,7 +810,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(12.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -817,11 +824,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.bodySmall,
-                textAlign: TextAlign.center,
-              ),
+              // Text(
+              //   subtitle,
+              //   style: Theme.of(context).textTheme.bodySmall,
+              //   textAlign: TextAlign.center,
+              // ),
             ],
           ),
         ),
@@ -928,7 +935,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   
   int _getColumnCount(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-    if (width < 600) return 1;
+    if (width < 600) return 2;
     if (width < 900) return 2;
     if (width < 1200) return 3;
     return 4;

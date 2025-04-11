@@ -8,16 +8,21 @@ import 'package:revboostapp/providers/auth_provider.dart';
 import 'package:revboostapp/providers/business_setup_provider.dart';
 import 'package:revboostapp/providers/dashboard_provider.dart';
 import 'package:revboostapp/providers/settings_provider.dart';
+import 'package:revboostapp/providers/subscription_provider.dart';
 import 'package:revboostapp/providers/theme_provider.dart';
 import 'package:revboostapp/routing/app_router.dart';
 import 'package:url_strategy/url_strategy.dart';
+// import 'package:webview_flutter/webview_flutter.dart';
+// import 'package:webview_flutter_web/webview_flutter_web.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Initialize Firebase
   await FirebaseService.initialize();
-   setPathUrlStrategy();
+  setPathUrlStrategy();
+  // WebViewPlatform.instance = WebWebViewPlatform();
+
   runApp(const MyApp());
 }
 
@@ -33,6 +38,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => BusinessSetupProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
+        ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
       ],
       child: Builder(
         builder: (context) {

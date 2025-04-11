@@ -76,9 +76,9 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
         controller: _tabController,
         labelColor: AppColors.primary,
         unselectedLabelColor: Theme.of(context).textTheme.bodyLarge?.color,
-        indicator: UnderlineTabIndicator(
+        indicator: const UnderlineTabIndicator(
           borderSide: BorderSide(color: AppColors.primary, width: 3),
-          insets: const EdgeInsets.symmetric(horizontal: 16),
+          insets: EdgeInsets.symmetric(horizontal: 16),
         ),
         tabs: const [
           Tab(text: 'Profile'),
@@ -149,7 +149,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                             userProfile.displayName?.isNotEmpty == true
                               ? userProfile.displayName![0].toUpperCase()
                               : 'U',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 36,
                               fontWeight: FontWeight.bold,
                               color: AppColors.primary,
@@ -161,7 +161,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         userProfile.displayName?.isNotEmpty == true
                           ? userProfile.displayName![0].toUpperCase()
                           : 'U',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 36,
                           fontWeight: FontWeight.bold,
                           color: AppColors.primary,
@@ -331,14 +331,14 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                           width: 120,
                           height: 120,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Icon(
+                          errorBuilder: (context, error, stackTrace) => const Icon(
                             Icons.business_outlined,
                             size: 48,
                             color: AppColors.primary,
                           ),
                         ),
                       )
-                    : Icon(
+                    : const Icon(
                         Icons.business_outlined,
                         size: 48,
                         color: AppColors.primary,
@@ -660,7 +660,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                   label: const Text('Delete Account'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.error,
-                    side: BorderSide(color: AppColors.error),
+                    side: const BorderSide(color: AppColors.error),
                   ),
                 ),
               ],

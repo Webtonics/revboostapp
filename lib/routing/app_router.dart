@@ -13,7 +13,10 @@ import 'package:revboostapp/features/qr_code/screens/qr_code_screen.dart';
 import 'package:revboostapp/features/reviews/screens/public_review_screen.dart';
 import 'package:revboostapp/features/settings/settings_screen.dart';
 import 'package:revboostapp/features/splash/screens/splash_screen.dart';
+import 'package:revboostapp/features/subscription/screens/subscription_screen.dart';
+// import 'package:revboostapp/features/subscription/screens/subscription_success_screen.dart';
 import 'package:revboostapp/providers/auth_provider.dart';
+// import 'package:revboostapp/providers/subscription_provider.dart';
 import 'package:revboostapp/widgets/layout/app_bar_with_theme_toggle.dart';
 import 'package:revboostapp/widgets/layout/app_layout.dart';
 
@@ -213,7 +216,7 @@ redirect: (context, state) async {
         ),
         GoRoute(
           path: AppRoutes.subscription,
-          builder: (context, state) => const AppLayout(title: "Subscription", child:   PlaceholderScreen(title: 'Subscription')),
+          builder: (context, state) => const SubscriptionScreen(),
         ),
         GoRoute(
           path: AppRoutes.reviewPage,
@@ -222,7 +225,34 @@ redirect: (context, state) async {
             return PublicReviewScreen(businessId: businessId);
           },
         ),
-      ],
-    );
-  }
-}
+        // GoRoute(
+        //   path: '/subscription-success',
+        //   builder: (context, state) {
+        //     // Extract parameters from URL
+        //     final orderId = state.uri.queryParameters['order_id'];
+        //     final planId = state.uri.queryParameters['plan_id'];
+        //     final userId = state.uri.queryParameters['user_id'];
+            
+        //     // Process subscription if possible
+        //     if (orderId != null && planId != null) {
+        //       final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+        //       subscriptionProvider.processSuccessfulSubscription(orderId, planId);
+        //     }
+            
+        //     // Show success page
+        //     return SubscriptionSuccessScreen(
+        //       orderId: orderId,
+        //       planId: planId,
+        //     );
+        //   },
+        // ),
+
+        // Add the subscription route
+      GoRoute(
+          path: AppRoutes.subscription,
+          builder: (context, state) => const SubscriptionScreen(),
+        ),
+              ],
+            );
+          }
+        }

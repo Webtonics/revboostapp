@@ -35,7 +35,7 @@ class OnboardingService {
       }
       return false;
     } catch (e) {
-      print('Error checking business setup: $e');
+      // print('Error checking business setup: $e');
       return false;
     }
   }
@@ -58,7 +58,7 @@ class OnboardingService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('business_setup_completed', true);
     } catch (e) {
-      print('Error marking business setup as completed: $e');
+      // print('Error marking business setup as completed: $e');
     }
   }
   

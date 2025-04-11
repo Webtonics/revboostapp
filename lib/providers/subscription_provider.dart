@@ -34,36 +34,55 @@ class SubscriptionProvider with ChangeNotifier {
     // Define your subscription plans with real product IDs
     _availablePlans = [
       SubscriptionPlan(
-        id: 'monthly',
-        name: 'Pro Monthly',
+        id: 'free',
+        name: 'Startup',
         description: 'Full access to all premium features',
-        price: 19.99,
+        price: 9.99,
+        interval: 'monthly',
+        features: [
+          // 'Unlimited review requests',
+          'Custom QR codes',
+          'Negative Review Filtering',
+          'Private feedback collection',
+          // 'Advanced review analytics',
+          'Priority support',
+        ],
+        // lemonSqueezyProductId: '15054cf1-8e60-4160-b793-b2bd7dfc3811', // live
+        lemonSqueezyProductId: '5411962e-7695-4cb0-9f79-271fbc0c2964', //test
+      ),
+      SubscriptionPlan(
+        id: 'monthly',
+        name: 'Pro',
+        description: 'Full access to all premium features',
+        price: 29.99,
         interval: 'monthly',
         features: [
           'Unlimited review requests',
           'Custom QR codes',
           'Email & SMS review invites',
           'Private feedback collection',
-          'Advanced review analytics',
+          // 'Advanced review analytics',
           'Priority support',
         ],
-        lemonSqueezyProductId: '488009', // Replace with your actual product ID
+        // lemonSqueezyProductId: '15054cf1-8e60-4160-b793-b2bd7dfc3811', // live
+        lemonSqueezyProductId: '5411962e-7695-4cb0-9f79-271fbc0c2964', //test
       ),
       SubscriptionPlan(
         id: 'yearly',
         name: 'Pro Yearly',
         description: 'Save 16% with annual billing',
-        price: 199.99,
+        price: 299.99,
         interval: 'yearly',
         features: [
           'Everything in Pro Monthly',
           '16% discount vs monthly plan',
-          'Advanced review analytics',
-          'Custom branding options',
-          'Priority 24/7 email support',
+          // 'Advanced review analytics',
+          // 'Custom branding options',
+          'Priority 24/7 support',
           'Dedicated account manager',
         ],
-        lemonSqueezyProductId: 'pro-yearly', // Replace with your actual product ID
+        // lemonSqueezyProductId: '97989c2f-9926-4324-9801-71fe40267186', 
+        lemonSqueezyProductId: 'b5efc2ff-8c50-4d47-a34a-5e317feea837', 
       ),
     ];
   }
@@ -125,20 +144,39 @@ class SubscriptionProvider with ChangeNotifier {
   }
   
   // Get the checkout URL for a specific plan
-  String getCheckoutUrl(String planId) {
+//   String getCheckoutUrl(String planId) {
+//   final plan = _availablePlans.firstWhere(
+//     (plan) => plan.id == planId,
+//     orElse: () => throw Exception('Plan not found'),
+//   );
+  
+//   // Get the user's email for identification
+//   final userEmail = _auth.currentUser?.email ?? '';
+//   if (userEmail.isEmpty) {
+//     throw Exception('User email required for checkout');
+//   }
+  
+//   // Create checkout URL with user email for identification
+//   // return 'https://webtonics.lemonsqueezy.com/buy/${plan.lemonSqueezyProductId}?checkout[email]=$userEmail';
+// }
+String getCheckoutUrl(String planId) {
   final plan = _availablePlans.firstWhere(
     (plan) => plan.id == planId,
     orElse: () => throw Exception('Plan not found'),
   );
   
-  // Get the user's email for identification
+  // Get the user's email for identification (still useful to pre-fill)
   final userEmail = _auth.currentUser?.email ?? '';
-  if (userEmail.isEmpty) {
-    throw Exception('User email required for checkout');
+  
+  // Use the direct hosted checkout URL format
+  // The format is like: https://webtonics.lemonsqueezy.com/buy/97989c2f-9926-4324-9801-71fe40267186
+  
+  if (plan.lemonSqueezyProductId.isEmpty) {
+    throw Exception('Invalid product checkout URL');
   }
   
-  // Create checkout URL with user email for identification
-  return 'https://webtonics.lemonsqueezy.com/buy/${plan.lemonSqueezyProductId}?checkout[email]=$userEmail';
+  // For prefilling the email (optional)
+  return 'https://webtonics.lemonsqueezy.com/buy/${plan.lemonSqueezyProductId}';
 }
   
   // Get customer portal URL

@@ -472,6 +472,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     );
   }
   
+
   Widget _buildPlanCard(
     BuildContext context,
     SubscriptionPlan plan,

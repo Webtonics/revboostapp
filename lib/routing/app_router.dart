@@ -10,6 +10,7 @@ import 'package:revboostapp/features/dashboard/screens/dashboard_screen.dart';
 import 'package:revboostapp/features/onboarding/screens/onboarding_screen.dart';
 import 'package:revboostapp/features/onboarding/services/onboarding_service.dart';
 import 'package:revboostapp/features/qr_code/screens/qr_code_screen.dart';
+import 'package:revboostapp/features/review_requests/screens/review_requests_screen.dart';
 import 'package:revboostapp/features/reviews/screens/public_review_screen.dart';
 import 'package:revboostapp/features/settings/settings_screen.dart';
 import 'package:revboostapp/features/splash/screens/splash_screen.dart';
@@ -196,7 +197,7 @@ redirect: (context, state) async {
         ),
         GoRoute(
           path: AppRoutes.reviewRequests,
-          builder: (context, state) => const AppLayout(title: "Review Requests", child:   PlaceholderScreen(title: 'Review Requests')),
+          builder: (context, state) => const ReviewRequestsScreen(),
         ),
         GoRoute(
           path: AppRoutes.contacts,

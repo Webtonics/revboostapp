@@ -7,13 +7,18 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:revboostapp/core/services/email_service.dart';
 
 import 'package:revboostapp/main.dart';
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget( MyApp(emailService: EmailService(
+    apiKey:  const String.fromEnvironment('RESEND_API_KEY', defaultValue: ''),
+    fromEmail: 'reviews@revboostapp.com', 
+    fromName: 'RevBoost',
+  )));
 
     // Verify that our counter starts at 0.
     expect(find.text('0'), findsOneWidget);

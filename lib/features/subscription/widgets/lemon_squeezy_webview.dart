@@ -8,7 +8,7 @@ import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 // Import for web redirection
-import 'dart:js' as js;
+// import 'dart:js' as js;
 
 class LemonSqueezyWebView extends StatefulWidget {
   final String planId;
@@ -126,7 +126,7 @@ class _LemonSqueezyWebViewState extends State<LemonSqueezyWebView> {
   void openExternalCheckout() {
     if (_checkoutUrl.isNotEmpty) {
       // Use JavaScript interop to open in a new tab
-      js.context.callMethod('open', [_checkoutUrl, '_blank']);
+      // js.context.callMethod('open', [_checkoutUrl, '_blank']);
     }
   }
   

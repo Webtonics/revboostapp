@@ -1,8 +1,9 @@
-// lib/main.dart (rollback to previous version)
+// lib/main.dart
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:revboostapp/core/services/firebase_service.dart';
+import 'package:revboostapp/core/services/email_service.dart'; // Add this import
 import 'package:revboostapp/core/theme/app_theme.dart';
 import 'package:revboostapp/providers/auth_provider.dart';
 import 'package:revboostapp/providers/business_setup_provider.dart';
@@ -12,8 +13,6 @@ import 'package:revboostapp/providers/subscription_provider.dart';
 import 'package:revboostapp/providers/theme_provider.dart';
 import 'package:revboostapp/routing/app_router.dart';
 import 'package:url_strategy/url_strategy.dart';
-// import 'package:webview_flutter/webview_flutter.dart';
-// import 'package:webview_flutter_web/webview_flutter_web.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,13 +20,21 @@ void main() async {
   // Initialize Firebase
   await FirebaseService.initialize();
   setPathUrlStrategy();
-  // WebViewPlatform.instance = WebWebViewPlatform();
 
-  runApp(const MyApp());
+  // Create the email service
+  final emailService = EmailService(
+    apiKey: const String.fromEnvironment('RESEND_API_KEY', defaultValue: ''),
+    fromEmail: 'reviews@revboostapp.com', 
+    fromName: 'RevBoost',
+  );
+
+  runApp(MyApp(emailService: emailService));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final EmailService emailService;
+  
+  const MyApp({super.key, required this.emailService});
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +46,9 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
         ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
+        
+        // Provide the EmailService for use in the review request screen
+        Provider.value(value: emailService),
       ],
       child: Builder(
         builder: (context) {

@@ -8,7 +8,7 @@ import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 // Import for web redirection
-// import 'dart:js' as js;
+import 'dart:js' as js;
 
 class LemonSqueezyWebView extends StatefulWidget {
   final String planId;
@@ -124,9 +124,12 @@ class _LemonSqueezyWebViewState extends State<LemonSqueezyWebView> {
   
   // Method to open external checkout in web platform
   void openExternalCheckout() {
+    // Use JavaScript interop to open the URL in a new tab
+    // This requires dart:html which should be conditionally imported
+    // js.context.callMethod('open', [_checkoutUrl, '_blank']);
     if (_checkoutUrl.isNotEmpty) {
       // Use JavaScript interop to open in a new tab
-      // js.context.callMethod('open', [_checkoutUrl, '_blank']);
+     kIsWeb? js.context.callMethod('open', [_checkoutUrl, '_blank']): null;
     }
   }
   
@@ -155,7 +158,7 @@ class _LemonSqueezyWebViewState extends State<LemonSqueezyWebView> {
             const Icon(Icons.info, size: 48, color: Colors.blue),
             const SizedBox(height: 16),
             const Text(
-              'WebView functionality is limited in web version.\nYou will be redirected to the external checkout page.',
+              'Continue to Lemon Squeezy Checkout',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16),
             ),

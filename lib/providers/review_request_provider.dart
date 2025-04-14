@@ -127,9 +127,7 @@ class ReviewRequestProvider with ChangeNotifier {
       final port = Uri.base.port;
       final scheme = Uri.base.scheme;
       
-      final baseUrl = port != 80 && port != 443
-          ? '$scheme://$host:$port'
-          : '$scheme://$host';
+      const baseUrl = "https://app.revboostapp.com";
           
       final reviewLink = '$baseUrl/r/${business.id}';
       

@@ -345,10 +345,10 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
     });
     // if (!mounted) return;
     context.go(AppRoutes.dashboard);
-    if (mounted) {
-      // Navigate directly to dashboard
-      context.go(AppRoutes.dashboard);
-    }
+    // if (mounted) {
+    //   // Navigate directly to dashboard
+    //   context.go(AppRoutes.dashboard);
+    // }
   } catch (e) {
     setState(() {
       _isLoading = false;
@@ -361,49 +361,6 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
     }
   }
 }
-  
-  
-//   void _showSuccessDialog() {
-//   showDialog(
-//     context: context,
-//     barrierDismissible: false,
-//     builder: (dialogContext) {
-//       // Schedule navigation to happen after a delay
-//       Future.delayed(const Duration(milliseconds: 1500), () {
-//         // First close the dialog
-//         Navigator.of(dialogContext).pop();
-        
-//         // Then navigate directly - no microtask needed
-//         context.go(AppRoutes.dashboard);
-//       });
-      
-//       return Dialog(
-//         backgroundColor: Colors.transparent,
-//         elevation: 0,
-//         child: Column(
-//           mainAxisSize: MainAxisSize.min,
-//           children: [
-//             Lottie.asset(
-//               'assets/lottie/success.json',
-//               width: 200,
-//               height: 200,
-//               repeat: false,
-//             ),
-//             const Text(
-//               'Setup Complete!',
-//               style: TextStyle(
-//                 color: Colors.white,
-//                 fontSize: 22,
-//                 fontWeight: FontWeight.bold,
-//               ),
-//             ),
-//           ],
-//         ),
-//       );
-//     },
-//   );
-// }
-
   @override
   Widget build(BuildContext context) {
     // Detect screen size

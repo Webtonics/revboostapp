@@ -46,26 +46,53 @@ class ReviewRequestModel {
   });
   
   /// Creates a [ReviewRequestModel] from a Firestore document
-  factory ReviewRequestModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  // factory ReviewRequestModel.fromFirestore(DocumentSnapshot doc) {
+  //   final data = doc.data() as Map<String, dynamic>;
     
-    return ReviewRequestModel(
-      id: doc.id,
-      businessId: data['businessId'] ?? '',
-      customerName: data['customerName'] ?? '',
-      customerEmail: data['customerEmail'] ?? '',
-      customerPhone: data['customerPhone'],
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      sentAt: data['sentAt'] != null ? (data['sentAt'] as Timestamp).toDate() : null,
-      clickedAt: data['clickedAt'] != null ? (data['clickedAt'] as Timestamp).toDate() : null,
-      completedAt: data['completedAt'] != null ? (data['completedAt'] as Timestamp).toDate() : null,
-      status: _statusFromString(data['status'] ?? 'pending'),
-      reviewLink: data['reviewLink'] ?? '',
-      rating: data['rating'],
-      feedback: data['feedback'],
-      metadata: data['metadata'],
-    );
-  }
+  //   return ReviewRequestModel(
+  //     id: doc.id,
+  //     businessId: data['businessId'] ?? '',
+  //     customerName: data['customerName'] ?? '',
+  //     customerEmail: data['customerEmail'] ?? '',
+  //     customerPhone: data['customerPhone'],
+  //     createdAt: (data['createdAt'] as Timestamp).toDate(),
+  //     sentAt: data['sentAt'] != null ? (data['sentAt'] as Timestamp).toDate() : null,
+  //     clickedAt: data['clickedAt'] != null ? (data['clickedAt'] as Timestamp).toDate() : null,
+  //     completedAt: data['completedAt'] != null ? (data['completedAt'] as Timestamp).toDate() : null,
+  //     status: _statusFromString(data['status'] ?? 'pending'),
+  //     reviewLink: data['reviewLink'] ?? '',
+  //     rating: data['rating'],
+  //     feedback: data['feedback'],
+  //     metadata: data['metadata'],
+  //   );
+  // }
+  factory ReviewRequestModel.fromFirestore(DocumentSnapshot doc) {
+  final data = doc.data() as Map<String, dynamic>;
+  
+  return ReviewRequestModel(
+    id: doc.id,
+    businessId: data['businessId'] ?? '',
+    customerName: data['customerName'] ?? '',
+    customerEmail: data['customerEmail'] ?? '',
+    customerPhone: data['customerPhone'],
+    createdAt: data['createdAt'] != null 
+        ? (data['createdAt'] as Timestamp).toDate() 
+        : DateTime.now(),  // Provide a default value
+    sentAt: data['sentAt'] != null 
+        ? (data['sentAt'] as Timestamp).toDate() 
+        : null,
+    clickedAt: data['clickedAt'] != null 
+        ? (data['clickedAt'] as Timestamp).toDate() 
+        : null,
+    completedAt: data['completedAt'] != null 
+        ? (data['completedAt'] as Timestamp).toDate() 
+        : null,
+    status: _statusFromString(data['status'] ?? 'pending'),
+    reviewLink: data['reviewLink'] ?? '',
+    rating: data['rating'],
+    feedback: data['feedback'],
+  );
+}
   
   /// Converts this [ReviewRequestModel] to a map for Firestore
   Map<String, dynamic> toFirestore() {
@@ -211,3 +238,4 @@ class BatchOperationResult {
     this.errors = const [],
   });
 }
+

@@ -1,9 +1,11 @@
-// lib/main.dart
+// lib/main.dart with secure configuration
 
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
+import 'package:revboostapp/core/config/api_config.dart';
+import 'package:revboostapp/core/services/email_service.dart';
 import 'package:revboostapp/core/services/firebase_service.dart';
-import 'package:revboostapp/core/services/email_service.dart'; // Add this import
 import 'package:revboostapp/core/theme/app_theme.dart';
 import 'package:revboostapp/providers/auth_provider.dart';
 import 'package:revboostapp/providers/business_setup_provider.dart';
@@ -19,15 +21,26 @@ void main() async {
   
   // Initialize Firebase
   await FirebaseService.initialize();
+  
+  // Initialize API config
+  final apiConfig = ApiConfig();
+  await apiConfig.initialize();
+  
+  // Optionally load from remote config
+  // await apiConfig.loadFromRemoteConfig();
+  await dotenv.load(fileName: ".env");
+  debugPrint('RESEND_API_KEY: ${dotenv.env['RESEND_API_KEY']}');
+  debugPrint('EMAIL_FROM_ADDRESS: ${dotenv.env['EMAIL_FROM_ADDRESS']}');
+  
   setPathUrlStrategy();
 
-  // Create the email service
+  // Create the email service with secure config
   final emailService = EmailService(
-    apiKey: const String.fromEnvironment('RESEND_API_KEY', defaultValue: ''),
-    fromEmail: 'reviews@revboostapp.com', 
-    fromName: 'RevBoost',
+    apiKey: apiConfig.resendApiKey,
+    fromEmail: apiConfig.emailFromAddress, 
+    fromName: apiConfig.emailFromName,
   );
-
+  
   runApp(MyApp(emailService: emailService));
 }
 
@@ -47,7 +60,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
         ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
         
-        // Provide the EmailService for use in the review request screen
+        // Provide the EmailService
         Provider.value(value: emailService),
       ],
       child: Builder(

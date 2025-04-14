@@ -1,26 +1,29 @@
 // lib/core/services/email_service.dart
 
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
-/// A service for sending emails using Resend API
+/// A service for sending emails using API server
 class EmailService {
-  final String _apiKey;
+  // API server URL
+  final String _apiBaseUrl;
+  
+  // These are kept for backward compatibility but are not sent to the server
   final String _fromEmail;
   final String _fromName;
   
   /// Creates an instance of [EmailService]
-  /// 
-  /// Requires a Resend API key, sender email, and sender name.
   EmailService({
-    required String apiKey,
+    required String apiKey, // Kept for backward compatibility
     required String fromEmail,
     required String fromName,
-  }) : _apiKey = apiKey,
-       _fromEmail = fromEmail,
-       _fromName = fromName;
-  
+    String? apiBaseUrl,
+  }) : _fromEmail = fromEmail,
+       _fromName = fromName,
+       _apiBaseUrl = apiBaseUrl ?? 'https://email-sms-sending-server.onrender.com';
+
   /// Sends a review request email to a customer
   ///
   /// Returns [true] if the email was sent successfully, [false] otherwise.
@@ -33,257 +36,146 @@ class EmailService {
     Map<String, dynamic>? customData,
   }) async {
     try {
-      const url = 'https://api.resend.com/emails';
+      debugPrint('Preparing to send email to: $toEmail via API server');
       
-      // Build a nice HTML email with responsive design
-      final htmlContent = _buildReviewRequestHtml(
-        customerName: customerName,
-        businessName: businessName,
-        reviewLink: reviewLink,
-        customData: customData,
-      );
+      // Create the endpoint URL
+      final url = '$_apiBaseUrl/api/email/review-request';
       
-      // Prepare email data
-      final emailData = {
-        'from': '$_fromName <$_fromEmail>',
-        'to': [toEmail],
-        'subject': 'We\'d love to hear your feedback!',
-        'html': htmlContent,
-        'tags': [
-          {'name': 'type', 'value': 'review_request'},
-          {'name': 'business', 'value': businessName},
-        ],
+      // Prepare the request body for the API server
+      final Map<String, dynamic> requestBody = {
+        'toEmail': toEmail,
+        'customerName': customerName,
+        'businessName': businessName,
+        'reviewLink': reviewLink,
+        'fromEmail': _fromEmail,
+        'fromName': _fromName,
       };
-      
-      // Add reply-to if provided
+
       if (replyTo != null && replyTo.isNotEmpty) {
-        emailData['reply_to'] = replyTo;
+        requestBody['replyTo'] = replyTo;
+      }
+
+      if (customData != null) {
+        requestBody['customData'] = customData;
       }
       
-      // Send email via Resend API
+      final encodedBody = jsonEncode(requestBody);
+      debugPrint('Request body (truncated): ${encodedBody.substring(0, min(100, encodedBody.length))}...');
+      
+      bool serverConnected = await testServerConnection();
+      if (!serverConnected) {
+        debugPrint('Cannot connect to email server. Check server URL and status.');
+        return false;
+      }
+      // Send request to our API server
       final response = await http.post(
         Uri.parse(url),
         headers: {
-          'Authorization': 'Bearer $_apiKey',
           'Content-Type': 'application/json',
-          'User-Agent': 'RevBoost/1.0',
         },
-        body: jsonEncode(emailData),
-      );
+        body: encodedBody,
+      ).timeout(const Duration(seconds: 15));
       
-      // Log response for debugging in development
-      if (kDebugMode) {
-        print('Resend API Response: ${response.statusCode} - ${response.body}');
-      }
+      // Log response for debugging
+      debugPrint('API Response Status: ${response.statusCode}');
+      debugPrint('API Response Body: ${response.body}');
       
       // Check response
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return true;
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        if (responseData['success'] == true) {
+          debugPrint('Email sent successfully to $toEmail');
+          return true;
+        } else {
+          debugPrint('API reported failure: ${responseData['error'] ?? 'Unknown error'}');
+          return false;
+        }
       } else {
         // Log error details
-        final responseBody = jsonDecode(response.body);
-        debugPrint('Email sending failed: ${responseBody['message'] ?? response.body}');
+        try {
+          final responseBody = jsonDecode(response.body);
+          final error = responseBody['error'];
+
+          if (error is Map && error['message'] != null) {
+            debugPrint('Email sending failed: ${error['message']}');
+          } else {
+            debugPrint('Email sending failed: ${response.body}');
+          }
+        } catch (_) {
+          debugPrint('Failed to parse error response: ${response.body}');
+        }
         return false;
       }
-    } catch (e) {
+    } on TimeoutException {
+      debugPrint('Request timed out after 15 seconds');
+      return false;
+    } catch (e, stackTrace) {
       debugPrint('Exception sending email: $e');
+      debugPrint('Stack trace: ${stackTrace.toString().substring(0, min(500, stackTrace.toString().length))}');
       return false;
     }
   }
   
-  /// Builds HTML content for the review request email
-  String _buildReviewRequestHtml({
-    required String customerName,
-    required String businessName,
-    required String reviewLink,
-    Map<String, dynamic>? customData,
-  }) {
-    return '''
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>We'd Love Your Feedback</title>
-      <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        
-        /* Base styles */
-        body {
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-          line-height: 1.6;
-          color: #374151;
-          background-color: #f3f4f6;
-          margin: 0;
-          padding: 0;
-        }
-        
-        /* Container styles */
-        .container {
-          max-width: 600px;
-          margin: 0 auto;
-          padding: 20px;
-          background-color: #ffffff;
-        }
-        
-        /* Header styles */
-        .header {
-          text-align: center;
-          padding: 20px 0;
-          border-bottom: 1px solid #e5e7eb;
-        }
-        
-        .header h2 {
-          color: #1e3a8a;
-          margin: 0;
-          font-size: 24px;
-          font-weight: 700;
-        }
-        
-        /* Content styles */
-        .content {
-          padding: 24px 20px;
-        }
-        
-        /* Button styles */
-        .button-container {
-          text-align: center;
-          margin: 30px 0;
-        }
-        
-        .button {
-          display: inline-block;
-          padding: 12px 24px;
-          background-color: #2563eb;
-          color: white !important;
-          text-decoration: none;
-          border-radius: 6px;
-          font-weight: 600;
-          font-size: 16px;
-          transition: background-color 0.3s;
-        }
-        
-        .button:hover {
-          background-color: #1e40af;
-        }
-        
-        /* Star rating styles */
-        .rating-container {
-          text-align: center;
-          margin: 30px 0;
-        }
-        
-        .stars {
-          display: inline-block;
-        }
-        
-        .star {
-          display: inline-block;
-          margin: 0 5px;
-          font-size: 40px;
-          color: #d1d5db;
-        }
-        
-        .star a {
-          color: #d1d5db;
-          text-decoration: none;
-        }
-        
-        .star a:hover {
-          color: #fbbf24;
-        }
-        
-        /* Footer styles */
-        .footer {
-          text-align: center;
-          margin-top: 20px;
-          padding-top: 20px;
-          border-top: 1px solid #e5e7eb;
-          font-size: 12px;
-          color: #6b7280;
-        }
-        
-        /* Responsive adjustments */
-        @media only screen and (max-width: 480px) {
-          .container {
-            padding: 10px;
-          }
-          
-          .content {
-            padding: 20px 15px;
-          }
-          
-          .button {
-            display: block;
-            text-align: center;
-          }
-        }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h2>We'd Love Your Feedback!</h2>
-        </div>
-        <div class="content">
-          <p>Hello ${_escapeHtml(customerName)},</p>
-          <p>Thank you for choosing ${_escapeHtml(businessName)}. We hope you had a great experience!</p>
-          <p>We value your feedback and would appreciate it if you could take a moment to share your experience with us.</p>
-          
-          <div class="button-container">
-            <a href="${_escapeHtml(reviewLink)}" class="button">Leave a Review</a>
-          </div>
-          
-          <p>Your feedback helps us improve and better serve our customers.</p>
-          <p>Thank you for your time!</p>
-          <p>
-            Best regards,<br>
-            The ${_escapeHtml(businessName)} Team
-          </p>
-        </div>
-        <div class="footer">
-          <p>This email was sent to you because you interacted with ${_escapeHtml(businessName)}.</p>
-          <p>© ${DateTime.now().year} ${_escapeHtml(businessName)}. All rights reserved.</p>
-        </div>
-      </div>
-    </body>
-    </html>
-    ''';
-  }
   
-  /// Simple HTML escaping for basic security
-  String _escapeHtml(String text) {
-    return text
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
-  }
-  
+
+
   /// Sends a test email to verify the configuration
   Future<bool> sendTestEmail(String toEmail) async {
     try {
-      const url = 'https://api.resend.com/emails';
+      debugPrint('Sending test email to: $toEmail via API server');
       
+      // Create the endpoint URL
+      final url = '$_apiBaseUrl/api/email/test';
+      
+      final requestBody = {
+        'toEmail': toEmail,
+        'fromEmail': _fromEmail,
+        'fromName': _fromName,
+      };
+      
+      debugPrint('Test email request: ${jsonEncode(requestBody)}');
+      
+      // Send the request to our API server
       final response = await http.post(
         Uri.parse(url),
         headers: {
-          'Authorization': 'Bearer $_apiKey',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({
-          'from': '$_fromName <$_fromEmail>',
-          'to': [toEmail],
-          'subject': 'RevBoost Email Test',
-          'html': '<p>This is a test email from RevBoost. If you received this, email sending is working properly!</p>',
-        }),
-      );
+        body: jsonEncode(requestBody),
+      ).timeout(const Duration(seconds: 10));
       
-      return response.statusCode == 200 || response.statusCode == 201;
+      debugPrint('Test email response: ${response.statusCode} - ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return responseData['success'] == true;
+      }
+      
+      return false;
     } catch (e) {
       debugPrint('Error sending test email: $e');
       return false;
     }
   }
+
+
+  // Add this function to your EmailService class
+Future<bool> testServerConnection() async {
+  try {
+    final response = await http.get(Uri.parse('$_apiBaseUrl/health'))
+      .timeout(const Duration(seconds: 5));
+    
+    debugPrint('Server health check: ${response.statusCode} - ${response.body}');
+    return response.statusCode == 200;
+  } catch (e) {
+    debugPrint('Server connection test failed: $e');
+    return false;
+  }
+}
+
+// Call this function before attempting to send email
+
+  
+  /// Helper method for min function
+  int min(int a, int b) => a < b ? a : b;
 }

@@ -123,9 +123,7 @@ class ReviewRequestProvider with ChangeNotifier {
       notifyListeners();
       
       // Create review link with special tracking parameter
-      final host = Uri.base.host;
-      final port = Uri.base.port;
-      final scheme = Uri.base.scheme;
+      
       
       const baseUrl = "https://app.revboostapp.com";
           

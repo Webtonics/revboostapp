@@ -1,4 +1,6 @@
-<!DOCTYPE html><html><head>
+<!DOCTYPE html>
+<html>
+<head>
   <!--
     If you are serving your web app in a path other than the root, change the
     href value below to reflect the base path you are serving from.
@@ -16,104 +18,170 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="RevBoost - Reputation Management System">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="revboostapp">
+  <meta name="apple-mobile-web-app-title" content="RevBoost">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png">
 
-  <title>revboostapp</title>
+  <title>RevBoost - Reputation Management</title>
   <link rel="manifest" href="manifest.json">
+  
+  <!-- Preload critical assets -->
+  <link rel="preload" href="flutter_bootstrap.js" as="script">
+  <link rel="preload" href="assets/splash_logo_light.png" as="image" type="image/png">
+  
+  <!-- Add this line to ensure Flutter can communicate with the splash screen -->
+  <script>
+    window.addEventListener('flutter-first-frame', function() {
+      removeSplashFromWeb();
+    });
+  </script>
+  
+  <!-- Simplified splash screen styles -->
   <style id="splash-screen-style">
-    html {
-      height: 100%
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
-
+    
     body {
-      margin: 0;
-      min-height: 100%;
-      background-color: #2563EB;
-          background-size: 100% 100%;
+      background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%);
     }
-
-    .center {
-      margin: 0;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      -ms-transform: translate(-50%, -50%);
-      transform: translate(-50%, -50%);
+    
+    #splash-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
     }
-
-    .contain {
-      display:block;
-      width:100%; height:100%;
+    
+    .logo-container {
+      position: relative;
+      width: 160px;
+      height: 160px;
+      animation: pulse 2s infinite ease-in-out;
+    }
+    
+    .logo {
+      width: 100%;
+      height: 100%;
       object-fit: contain;
     }
-
-    .stretch {
-      display:block;
-      width:100%; height:100%;
+    
+    .loading-indicator {
+      margin-top: 30px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
-
-    .cover {
-      display:block;
-      width:100%; height:100%;
-      object-fit: cover;
+    
+    .dot {
+      width: 10px;
+      height: 10px;
+      margin: 0 5px;
+      border-radius: 50%;
+      background-color: white;
+      opacity: 0.8;
     }
-
-    .bottom {
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      -ms-transform: translate(-50%, 0);
-      transform: translate(-50%, 0);
+    
+    .dot-1 { animation: bounce 1.4s infinite 0.2s; }
+    .dot-2 { animation: bounce 1.4s infinite 0.4s; }
+    .dot-3 { animation: bounce 1.4s infinite 0.6s; }
+    
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
     }
-
-    .bottomLeft {
-      position: absolute;
-      bottom: 0;
-      left: 0;
+    
+    @keyframes bounce {
+      0%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-10px); }
     }
-
-    .bottomRight {
-      position: absolute;
-      bottom: 0;
-      right: 0;
-    }
-
-    @media (prefers-color-scheme: dark) {
+    
+    @media (prefers-color-scheme: light) {
       body {
-        background-color: #1E3A8A;
-          }
+        background: linear-gradient(135deg, #E0F2FE 0%, #2563EB 100%);
+      }
+    }
+    
+    .hidden {
+      opacity: 0 !important;
+      visibility: hidden !important;
     }
   </style>
+  
+  <!-- Simplified splash screen management script -->
   <script id="splash-screen-script">
+    // Track loading state
+    let flutterReady = false;
+    const minDisplayTime = 1500; // Shorter minimum time to show splash (ms)
+    const splashStartTime = Date.now();
+    
+    // Function called by Flutter when it's ready
     function removeSplashFromWeb() {
-      document.getElementById("splash")?.remove();
-      document.getElementById("splash-branding")?.remove();
-      document.body.style.background = "transparent";
+      flutterReady = true;
+      
+      // Calculate how long the splash has been shown
+      const elapsedTime = Date.now() - splashStartTime;
+      const timeToWait = Math.max(0, minDisplayTime - elapsedTime);
+      
+      // Remove splash after ensuring minimum display time
+      setTimeout(removeSplash, timeToWait);
     }
+    
+    // Function to remove splash
+    function removeSplash() {
+      const splash = document.getElementById('splash-container');
+      if (splash) {
+        splash.classList.add('hidden');
+        setTimeout(function() {
+          // Completely remove from DOM after transition finishes
+          splash.remove();
+          document.body.style.background = "transparent";
+        }, 600);
+      }
+    }
+    
+    // Failsafe - remove splash after maximum wait time (5 seconds) 
+    setTimeout(removeSplash, 5000);
+    
+    // Main listener for Flutter initialization
+    window.addEventListener('flutter-first-frame', removeSplashFromWeb);
   </script>
-  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
 </head>
 <body>
-  <picture id="splash-branding">
-    <source srcset="splash/img/branding-1x.png 1x, splash/img/branding-2x.png 2x, splash/img/branding-3x.png 3x, splash/img/branding-4x.png 4x" media="(prefers-color-scheme: light)">
-    <source srcset="splash/img/branding-dark-1x.png 1x, splash/img/branding-dark-2x.png 2x, splash/img/branding-dark-3x.png 3x, splash/img/branding-dark-4x.png 4x" media="(prefers-color-scheme: dark)">
-    <img class="bottom" aria-hidden="true" src="splash/img/branding-1x.png" alt="">
-  </picture>
-  <picture id="splash">
-      <source srcset="splash/img/light-1x.png 1x, splash/img/light-2x.png 2x, splash/img/light-3x.png 3x, splash/img/light-4x.png 4x" media="(prefers-color-scheme: light)">
-      <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
-      <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
-  </picture>
-  <script src="flutter_bootstrap.js" async=""></script>
+  <!-- Simplified splash screen with just logo and dots -->
+  <div id="splash-container">
+    <div class="logo-container">
+      <img class="logo" src="assets/splash_logo_light.png" alt="RevBoostApp">
+    </div>
+    <div class="loading-indicator">
+      <div class="dot dot-1"></div>
+      <div class="dot dot-2"></div>
+      <div class="dot dot-3"></div>
+    </div>
+  </div>
 
-
-</body></html>
+  <!-- Flutter bootstrap script -->
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

@@ -290,73 +290,72 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
 
   // Improved print function
   // Updated _printQrCode function with enhanced design
-  Future<void> _printQrCode() async {
+Future<void> _printQrCode() async {
   if (kIsWeb) {
     try {
-      // First capture the QR code
-      final Uint8List? pngBytes = await _captureQrCode();
-      if (pngBytes == null) return;
+      // Show a loading indicator to prevent UI freeze perception
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Preparing QR code for printing...')),
+        );
+      }
       
-      // Convert to base64 for embedding in HTML
-      final base64Image = base64Encode(pngBytes);
-      
-      // Create a download link element
-      final jsScript = '''
-        // Function to safely print QR code
-        function printQrCode() {
-          // Create a new document
-          var printWindow = window.open('', '_blank');
-          
-          if (!printWindow) {
-            alert('Please allow popups for this website to print the QR code.');
-            return;
-          }
-          
-          // Write simple HTML content
-          printWindow.document.write(
-            '<html>' +
-            '<head><title>$_businessName QR Code</title></head>' +
-            '<body style="text-align:center; padding:20px; font-family:Arial,sans-serif;">' +
-            '<h3 style="margin-bottom:8px;">$_businessName</h3>' +
-            '<div style="margin-bottom:20px;">We value your feedback! Scan to share your experience</div>' +
-            '<img style="width:280px; height:280px;" src="data:image/png;base64,$base64Image">' +
-            '<div style="margin-top:20px; font-size:12px; color:#666;">Powered by RevBoost</div>' +
-            '</body>' +
-            '</html>'
-          );
-          
-          // Close the document for writing
-          printWindow.document.close();
-          
-          // Try to print
-          try {
-            setTimeout(function() {
-              printWindow.focus();
-              printWindow.print();
-              
-              // Close the window after printing (or if print is canceled)
-              setTimeout(function() {
-                printWindow.close();
-              }, 1000);
-            }, 500);
-          } catch (err) {
-            console.error('Print error:', err);
-            alert('Error printing: ' + err);
-            printWindow.close();
-          }
-        }
+      // Use a microtask to avoid blocking the UI thread
+      await Future.microtask(() async {
+        // First capture the QR code
+        final Uint8List? pngBytes = await _captureQrCode();
+        if (pngBytes == null) return;
         
-        // Execute the function
-        printQrCode();
-      ''';
-      
-      // Run the JavaScript
-      js.context.callMethod('eval', [jsScript]);
+        // Convert to base64 for embedding in HTML
+        final base64Image = base64Encode(pngBytes);
+        
+        // Create a minimal JavaScript that won't block the main thread
+        final jsScript = '''
+          // Use a separate function to avoid scope issues
+          (function() {
+            // Create a new window with blank content
+            var printWindow = window.open('', '_blank', 'width=500,height=600');
+            
+            if (!printWindow) {
+              console.error('Popup blocked');
+              return;
+            }
+            
+            // Write very minimal HTML
+            printWindow.document.write(
+              '<html>' +
+              '<head><title>QR Code</title></head>' +
+              '<body style="text-align:center; padding:20px; font-family:Arial,sans-serif;">' +
+              '<div style="margin-bottom:20px;">' + '$_businessName' + '</div>' +
+              '<div style="margin-bottom:20px;">Scan to share your experience</div>' +
+              '<img src="data:image/png;base64,$base64Image" width="280" height="280">' +
+              '<div style="margin-top:20px; font-size:12px;">Powered by RevBoost</div>' +
+              '</body>' +
+              '</html>'
+            );
+            
+            // Close the document stream
+            printWindow.document.close();
+            
+            // Use setTimeout to prevent blocking
+            setTimeout(function() {
+              try {
+                printWindow.print();
+              } catch(e) {
+                console.error('Print error:', e);
+              }
+            }, 300);
+          })();
+        ''';
+        
+        // Run the JavaScript in a way that won't block the UI
+        js.context.callMethod('eval', [jsScript]);
+      });
       
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error preparing print view: $e')),
+          SnackBar(content: Text('Error: $e')),
         );
       }
     }
@@ -368,7 +367,6 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
     }
   }
 }
-
   void _copyLinkToClipboard() {
     Clipboard.setData(ClipboardData(text: _reviewLink));
     if (mounted) {

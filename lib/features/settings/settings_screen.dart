@@ -131,54 +131,54 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
           const SizedBox(height: 32),
           
           // Profile picture
-          Center(
-            child: Column(
-              children: [
-                CircleAvatar(
-                  radius: 48,
-                  backgroundColor: AppColors.primary.withOpacity(0.1),
-                  child: userProfile.photoUrl != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(48),
-                        child: Image.network(
-                          userProfile.photoUrl!,
-                          width: 96,
-                          height: 96,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Text(
-                            userProfile.displayName?.isNotEmpty == true
-                              ? userProfile.displayName![0].toUpperCase()
-                              : 'U',
-                            style: const TextStyle(
-                              fontSize: 36,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ),
-                      )
-                    : Text(
-                        userProfile.displayName?.isNotEmpty == true
-                          ? userProfile.displayName![0].toUpperCase()
-                          : 'U',
-                        style: const TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                ),
-                const SizedBox(height: 16),
-                TextButton.icon(
-                  onPressed: () {
-                    // Upload profile picture logic
-                  },
-                  icon: const Icon(Icons.upload),
-                  label: const Text('Upload Photo'),
-                ),
-              ],
-            ),
-          ),
+          // Center(
+          //   child: Column(
+          //     children: [
+          //       CircleAvatar(
+          //         radius: 48,
+          //         backgroundColor: AppColors.primary.withOpacity(0.1),
+          //         child: userProfile.photoUrl != null
+          //           ? ClipRRect(
+          //               borderRadius: BorderRadius.circular(48),
+          //               child: Image.network(
+          //                 userProfile.photoUrl!,
+          //                 width: 96,
+          //                 height: 96,
+          //                 fit: BoxFit.cover,
+          //                 errorBuilder: (context, error, stackTrace) => Text(
+          //                   userProfile.displayName?.isNotEmpty == true
+          //                     ? userProfile.displayName![0].toUpperCase()
+          //                     : 'U',
+          //                   style: const TextStyle(
+          //                     fontSize: 36,
+          //                     fontWeight: FontWeight.bold,
+          //                     color: AppColors.primary,
+          //                   ),
+          //                 ),
+          //               ),
+          //             )
+          //           : Text(
+          //               userProfile.displayName?.isNotEmpty == true
+          //                 ? userProfile.displayName![0].toUpperCase()
+          //                 : 'U',
+          //               style: const TextStyle(
+          //                 fontSize: 36,
+          //                 fontWeight: FontWeight.bold,
+          //                 color: AppColors.primary,
+          //               ),
+          //             ),
+          //       ),
+          //       const SizedBox(height: 16),
+          //       TextButton.icon(
+          //         onPressed: () {
+          //           // Upload profile picture logic
+          //         },
+          //         icon: const Icon(Icons.upload),
+          //         label: const Text('Upload Photo'),
+          //       ),
+          //     ],
+          //   ),
+          // ),
           
           const SizedBox(height: 32),
           
@@ -313,48 +313,48 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
           const SizedBox(height: 32),
           
           // Business logo
-          Center(
-            child: Column(
-              children: [
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: businessProfile.logoUrl != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          businessProfile.logoUrl!,
-                          width: 120,
-                          height: 120,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => const Icon(
-                            Icons.business_outlined,
-                            size: 48,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      )
-                    : const Icon(
-                        Icons.business_outlined,
-                        size: 48,
-                        color: AppColors.primary,
-                      ),
-                ),
-                const SizedBox(height: 16),
-                TextButton.icon(
-                  onPressed: () {
-                    // Upload logo logic
-                  },
-                  icon: const Icon(Icons.upload),
-                  label: const Text('Upload Logo'),
-                ),
-              ],
-            ),
-          ),
+          // Center(
+          //   child: Column(
+          //     children: [
+          //       Container(
+          //         width: 120,
+          //         height: 120,
+          //         decoration: BoxDecoration(
+          //           color: AppColors.primary.withOpacity(0.1),
+          //           borderRadius: BorderRadius.circular(12),
+          //         ),
+          //         child: businessProfile.logoUrl != null
+          //           ? ClipRRect(
+          //               borderRadius: BorderRadius.circular(12),
+          //               child: Image.network(
+          //                 businessProfile.logoUrl!,
+          //                 width: 120,
+          //                 height: 120,
+          //                 fit: BoxFit.cover,
+          //                 errorBuilder: (context, error, stackTrace) => const Icon(
+          //                   Icons.business_outlined,
+          //                   size: 48,
+          //                   color: AppColors.primary,
+          //                 ),
+          //               ),
+          //             )
+          //           : const Icon(
+          //               Icons.business_outlined,
+          //               size: 48,
+          //               color: AppColors.primary,
+          //             ),
+          //       ),
+          //       const SizedBox(height: 16),
+          //       TextButton.icon(
+          //         onPressed: () {
+          //           // Upload logo logic
+          //         },
+          //         icon: const Icon(Icons.upload),
+          //         label: const Text('Upload Logo'),
+          //       ),
+          //     ],
+          //   ),
+          // ),
           
           const SizedBox(height: 32),
           
@@ -470,7 +470,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
           ),
           const SizedBox(height: 8),
           Text(
-            'Manage your account preferences and security',
+            // 'Manage your account preferences and security',
+            'Manage your account security',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(context).textTheme.bodySmall?.color,
             ),
@@ -478,69 +479,69 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
           const SizedBox(height: 32),
           
           // Notification settings
-          Text(
-            'Notification Preferences',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 16),
+          // Text(
+          //   'Notification Preferences',
+          //   style: Theme.of(context).textTheme.titleLarge,
+          // ),
+          // const SizedBox(height: 16),
           
-          _buildSwitchTile(
-            title: 'Email Notifications',
-            subtitle: 'Receive updates and alerts via email',
-            value: emailNotifications,
-            onChanged: (value) async {
-              try {
-                setState(() {
-                  _isLoading = true;
-                });
+          // _buildSwitchTile(
+          //   title: 'Email Notifications',
+          //   subtitle: 'Receive updates and alerts via email',
+          //   value: emailNotifications,
+          //   onChanged: (value) async {
+          //     try {
+          //       setState(() {
+          //         _isLoading = true;
+          //       });
                 
-                await settings.updateNotificationSettings(
-                  emailNotifications: value,
-                  pushNotifications: pushNotifications,
-                );
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
-                  );
-                }
-              } finally {
-                setState(() {
-                  _isLoading = false;
-                });
-              }
-            },
-          ),
+          //       await settings.updateNotificationSettings(
+          //         emailNotifications: value,
+          //         pushNotifications: pushNotifications,
+          //       );
+          //     } catch (e) {
+          //       if (mounted) {
+          //         ScaffoldMessenger.of(context).showSnackBar(
+          //           SnackBar(content: Text('Error: $e')),
+          //         );
+          //       }
+          //     } finally {
+          //       setState(() {
+          //         _isLoading = false;
+          //       });
+          //     }
+          //   },
+          // ),
           
-          _buildSwitchTile(
-            title: 'Push Notifications',
-            subtitle: 'Receive real-time alerts on your device',
-            value: pushNotifications,
-            onChanged: (value) async {
-              try {
-                setState(() {
-                  _isLoading = true;
-                });
+          // _buildSwitchTile(
+          //   title: 'Push Notifications',
+          //   subtitle: 'Receive real-time alerts on your device',
+          //   value: pushNotifications,
+          //   onChanged: (value) async {
+          //     try {
+          //       setState(() {
+          //         _isLoading = true;
+          //       });
                 
-                await settings.updateNotificationSettings(
-                  emailNotifications: emailNotifications,
-                  pushNotifications: value,
-                );
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
-                  );
-                }
-              } finally {
-                setState(() {
-                  _isLoading = false;
-                });
-              }
-            },
-          ),
+          //       await settings.updateNotificationSettings(
+          //         emailNotifications: emailNotifications,
+          //         pushNotifications: value,
+          //       );
+          //     } catch (e) {
+          //       if (mounted) {
+          //         ScaffoldMessenger.of(context).showSnackBar(
+          //           SnackBar(content: Text('Error: $e')),
+          //         );
+          //       }
+          //     } finally {
+          //       setState(() {
+          //         _isLoading = false;
+          //       });
+          //     }
+          //   },
+          // ),
           
-          const SizedBox(height: 32),
+          // const SizedBox(height: 32),
           
           // Password change section
           Text(

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:revboostapp/features/auth/screens/email_verification_screen.dart'; // Add this new import
 import 'package:revboostapp/features/auth/screens/forgot_password_screen.dart';
 import 'package:revboostapp/features/auth/screens/login_screen.dart';
 import 'package:revboostapp/features/auth/screens/register_screen.dart';
@@ -15,9 +16,7 @@ import 'package:revboostapp/features/reviews/screens/public_review_screen.dart';
 import 'package:revboostapp/features/settings/settings_screen.dart';
 import 'package:revboostapp/features/splash/screens/splash_screen.dart';
 import 'package:revboostapp/features/subscription/screens/subscription_screen.dart';
-// import 'package:revboostapp/features/subscription/screens/subscription_success_screen.dart';
 import 'package:revboostapp/providers/auth_provider.dart';
-// import 'package:revboostapp/providers/subscription_provider.dart';
 import 'package:revboostapp/widgets/layout/app_bar_with_theme_toggle.dart';
 import 'package:revboostapp/widgets/layout/app_layout.dart';
 
@@ -28,6 +27,7 @@ class AppRoutes {
   static const String login = '/login';
   static const String register = '/register';
   static const String forgotPassword = '/forgot-password';
+  static const String emailVerification = '/email-verification'; // New route
   static const String businessSetup = '/business-setup';
   static const String dashboard = '/dashboard';
   static const String reviewRequests = '/review-requests';
@@ -63,7 +63,7 @@ class PlaceholderScreen extends StatelessWidget {
             ElevatedButton(
               onPressed: () {
                 context.read<AuthProvider>().signOut();
-                context.go( AppRoutes.splash);
+                context.go(AppRoutes.splash);
               },
               child: const Text('Sign Out (Test)'),
             ),
@@ -83,88 +83,93 @@ class AppRouter {
       initialLocation: AppRoutes.splash,
       debugLogDiagnostics: true,
       
-      // Update redirect in app_router.dart
-
-  // In your app_router.dart redirect method:
-// In app_router.dart
-redirect: (context, state) async {
-  // Get auth provider
-  final authProvider = Provider.of<AuthProvider>(context, listen: false);
-  final currentPath = state.matchedLocation;
-  
-  // Don't redirect during loading or on splash
-  if (authProvider.status == AuthStatus.loading || 
-      authProvider.status == AuthStatus.initial ||
-      currentPath == AppRoutes.splash) {
-    return null;
-  }
-  
-  // Always allow public review pages
-  if (currentPath.startsWith('/r/')) {
-    return null;
-  }
-  
-  // Check auth status
-  final isAuthenticated = authProvider.status == AuthStatus.authenticated;
-  final user = authProvider.user;
-  
-  // Check if on auth-related page
-  final isOnAuthPage = 
-      currentPath == AppRoutes.login || 
-      currentPath == AppRoutes.register || 
-      currentPath == AppRoutes.forgotPassword;
-  
-  // Not logged in -> go to login
-  if (!isAuthenticated) {
-    return isOnAuthPage ? null : AppRoutes.login;
-  }
-  
-  // Check for onboarding and business setup completion
-  final onboardingCompleted = await OnboardingService.isOnboardingCompleted();
-  final businessSetupCompleted = user?.hasCompletedSetup ?? false;
-  
-  // Determine where to send the authenticated user
-  if (isOnAuthPage) {
-    // If logged in but on auth page, where to go next?
-    if (!onboardingCompleted) {
-      return AppRoutes.onboarding;
-    } else if (!businessSetupCompleted) {
-      return AppRoutes.businessSetup;
-    } else {
-      return AppRoutes.dashboard;
-    }
-  }
-  
-  // Handle other cases
-  if (currentPath == AppRoutes.onboarding) {
-    if (onboardingCompleted) {
-      return businessSetupCompleted 
-          ? AppRoutes.dashboard 
-          : AppRoutes.businessSetup;
-    }
-    return null; // Allow access to onboarding if not completed
-  }
-  
-  if (currentPath == AppRoutes.businessSetup) {
-    if (businessSetupCompleted) {
-      return AppRoutes.dashboard;
-    }
-    if (!onboardingCompleted) {
-      return AppRoutes.onboarding;
-    }
-    return null; // Allow access to business setup if onboarding completed
-  }
-  
-  // If trying to access dashboard or other protected routes
-  if (!onboardingCompleted) {
-    return AppRoutes.onboarding;
-  } else if (!businessSetupCompleted) {
-    return AppRoutes.businessSetup;
-  }
-  
-  // Allow access to all other routes for authenticated users
-  return null;
-},
+      redirect: (context, state) async {
+        // Get auth provider
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final currentPath = state.matchedLocation;
+        
+        // Don't redirect during loading or on splash
+        if (authProvider.status == AuthStatus.loading || 
+            authProvider.status == AuthStatus.initial ||
+            currentPath == AppRoutes.splash) {
+          return null;
+        }
+        
+        // Always allow public review pages
+        if (currentPath.startsWith('/r/')) {
+          return null;
+        }
+        
+        // Check auth status
+        final isAuthenticated = authProvider.status == AuthStatus.authenticated;
+        final user = authProvider.user;
+        
+        // Check if on auth-related page
+        final isOnAuthPage = 
+            currentPath == AppRoutes.login || 
+            currentPath == AppRoutes.register || 
+            currentPath == AppRoutes.forgotPassword;
+        
+        // Not logged in -> go to login
+        if (!isAuthenticated) {
+          return isOnAuthPage ? null : AppRoutes.login;
+        }
+        
+        // NEW: Check email verification
+        final isEmailVerified = user?.emailVerified ?? false;
+        if (!isEmailVerified && currentPath != AppRoutes.emailVerification) {
+          return AppRoutes.emailVerification;
+        }
+        
+        // Only check onboarding and business setup if email is verified
+        if (isEmailVerified) {
+          // Check for onboarding and business setup completion
+          final onboardingCompleted = await OnboardingService.isOnboardingCompleted();
+          final businessSetupCompleted = user?.hasCompletedSetup ?? false;
+          
+          // Determine where to send the authenticated user
+          if (isOnAuthPage || currentPath == AppRoutes.emailVerification) {
+            // If logged in but on auth page, where to go next?
+            if (!onboardingCompleted) {
+              return AppRoutes.onboarding;
+            } else if (!businessSetupCompleted) {
+              return AppRoutes.businessSetup;
+            } else {
+              return AppRoutes.dashboard;
+            }
+          }
+          
+          // Handle other cases
+          if (currentPath == AppRoutes.onboarding) {
+            if (onboardingCompleted) {
+              return businessSetupCompleted 
+                  ? AppRoutes.dashboard 
+                  : AppRoutes.businessSetup;
+            }
+            return null; // Allow access to onboarding if not completed
+          }
+          
+          if (currentPath == AppRoutes.businessSetup) {
+            if (businessSetupCompleted) {
+              return AppRoutes.dashboard;
+            }
+            if (!onboardingCompleted) {
+              return AppRoutes.onboarding;
+            }
+            return null; // Allow access to business setup if onboarding completed
+          }
+          
+          // If trying to access dashboard or other protected routes
+          if (!onboardingCompleted) {
+            return AppRoutes.onboarding;
+          } else if (!businessSetupCompleted) {
+            return AppRoutes.businessSetup;
+          }
+        }
+        
+        // Allow access to all other routes for authenticated users
+        return null;
+      },
       
       routes: [
         GoRoute(
@@ -183,6 +188,11 @@ redirect: (context, state) async {
           path: AppRoutes.forgotPassword,
           builder: (context, state) => const ForgotPasswordScreen(),
         ),
+        // New email verification route
+        GoRoute(
+          path: AppRoutes.emailVerification,
+          builder: (context, state) => const EmailVerificationScreen(),
+        ),
         GoRoute(
           path: AppRoutes.onboarding,
           builder: (context, state) => const OnboardingScreen(),
@@ -193,7 +203,7 @@ redirect: (context, state) async {
         ),
         GoRoute(
           path: AppRoutes.dashboard,
-          builder: (context, state) => const  DashboardScreen(),
+          builder: (context, state) => const DashboardScreen(),
         ),
         GoRoute(
           path: AppRoutes.reviewRequests,
@@ -201,7 +211,7 @@ redirect: (context, state) async {
         ),
         GoRoute(
           path: AppRoutes.contacts,
-          builder: (context, state) => const AppLayout(title: "Contacts", child:   PlaceholderScreen(title: 'Contacts')), 
+          builder: (context, state) => const AppLayout(title: "Contacts", child: PlaceholderScreen(title: 'Contacts')), 
         ),
         GoRoute(
           path: AppRoutes.qrCode,
@@ -209,11 +219,11 @@ redirect: (context, state) async {
         ),
         GoRoute(
           path: AppRoutes.templates,
-          builder: (context, state) => const AppLayout(title: "Templates", child:   PlaceholderScreen(title: 'Templates')),
+          builder: (context, state) => const AppLayout(title: "Templates", child: PlaceholderScreen(title: 'Templates')),
         ),
         GoRoute(
           path: AppRoutes.settings,
-          builder: (context, state) =>const SettingsScreen(),
+          builder: (context, state) => const SettingsScreen(),
         ),
         GoRoute(
           path: AppRoutes.subscription,
@@ -226,34 +236,7 @@ redirect: (context, state) async {
             return PublicReviewScreen(businessId: businessId);
           },
         ),
-        // GoRoute(
-        //   path: '/subscription-success',
-        //   builder: (context, state) {
-        //     // Extract parameters from URL
-        //     final orderId = state.uri.queryParameters['order_id'];
-        //     final planId = state.uri.queryParameters['plan_id'];
-        //     final userId = state.uri.queryParameters['user_id'];
-            
-        //     // Process subscription if possible
-        //     if (orderId != null && planId != null) {
-        //       final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
-        //       subscriptionProvider.processSuccessfulSubscription(orderId, planId);
-        //     }
-            
-        //     // Show success page
-        //     return SubscriptionSuccessScreen(
-        //       orderId: orderId,
-        //       planId: planId,
-        //     );
-        //   },
-        // ),
-
-        // Add the subscription route
-      GoRoute(
-          path: AppRoutes.subscription,
-          builder: (context, state) => const SubscriptionScreen(),
-        ),
-              ],
-            );
-          }
-        }
+      ],
+    );
+  }
+}

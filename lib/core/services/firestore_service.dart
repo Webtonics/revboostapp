@@ -158,4 +158,17 @@ Future<void> createUser(UserModel user) async {
       rethrow;
     }
   }
+
+   Future<void> updateEmailVerificationStatus(String userId, bool isVerified) async {
+    try {
+      await _firestore.collection('users').doc(userId).update({
+        'emailVerified': isVerified,
+        'updatedAt': DateTime.now(),
+      });
+      debugPrint('Updated email verification status for user $userId: $isVerified');
+    } catch (e) {
+      debugPrint('Error updating email verification status: $e');
+      throw Exception('Failed to update email verification status: $e');
+    }
+  }
 }

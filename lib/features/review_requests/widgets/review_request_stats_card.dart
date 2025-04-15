@@ -105,44 +105,44 @@ class ReviewRequestStatsCard extends StatelessWidget {
             ),
             
             // Completed
-            _buildStatCard(
-              context,
-              title: 'Completed',
-              value: _formatNumber(statistics['completed'] ?? 0),
-              icon: Icons.check_circle_outline,
-              iconColor: Colors.green,
-              width: cardWidth,
-            ),
+            // _buildStatCard(
+            //   context,
+            //   title: 'Completed',
+            //   value: _formatNumber(statistics['completed'] ?? 0),
+            //   icon: Icons.check_circle_outline,
+            //   iconColor: Colors.green,
+            //   width: cardWidth,
+            // ),
             
-            // Click Rate
-            _buildStatCard(
-              context,
-              title: 'Click Rate',
-              value: _formatPercent(statistics['clickRate'] ?? 0),
-              icon: Icons.touch_app_outlined,
-              iconColor: Colors.orange,
-              width: cardWidth,
-            ),
+            // // Click Rate
+            // _buildStatCard(
+            //   context,
+            //   title: 'Click Rate',
+            //   value: _formatPercent(statistics['clickRate'] ?? 0),
+            //   icon: Icons.touch_app_outlined,
+            //   iconColor: Colors.orange,
+            //   width: cardWidth,
+            // ),
             
-            // Completion Rate
-            _buildStatCard(
-              context,
-              title: 'Completion Rate',
-              value: _formatPercent(statistics['completionRate'] ?? 0),
-              icon: Icons.assignment_turned_in_outlined,
-              iconColor: Colors.purple,
-              width: cardWidth,
-            ),
+            // // Completion Rate
+            // _buildStatCard(
+            //   context,
+            //   title: 'Completion Rate',
+            //   value: _formatPercent(statistics['completionRate'] ?? 0),
+            //   icon: Icons.assignment_turned_in_outlined,
+            //   iconColor: Colors.purple,
+            //   width: cardWidth,
+            // ),
             
-            // Positive Rate
-            _buildStatCard(
-              context,
-              title: 'Positive Feedback',
-              value: _formatPercent(statistics['positiveRate'] ?? 0),
-              icon: Icons.thumb_up_outlined,
-              iconColor: Colors.green,
-              width: cardWidth,
-            ),
+            // // Positive Rate
+            // _buildStatCard(
+            //   context,
+            //   title: 'Positive Feedback',
+            //   value: _formatPercent(statistics['positiveRate'] ?? 0),
+            //   icon: Icons.thumb_up_outlined,
+            //   iconColor: Colors.green,
+            //   width: cardWidth,
+            // ),
           ],
         );
       }

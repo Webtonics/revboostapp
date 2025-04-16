@@ -153,7 +153,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               const SizedBox(height: 32),
               
               // Pricing toggle
-              if (!isSubscribed) _buildPricingToggle(context),
+              // if (!isSubscribed) _buildPricingToggle(context),
               
               const SizedBox(height: 24),
               
@@ -299,52 +299,52 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     );
   }
   
-  Widget _buildPricingToggle(BuildContext context) {
-    // This is just a visual representation - for a real implementation
-    // you would track the state and update plan prices accordingly
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          'Monthly',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Switch(
-          value: false, // default to monthly
-          onChanged: (value) {
-            // Toggle between monthly and yearly
-          },
-          activeColor: Theme.of(context).colorScheme.primary,
-        ),
-        Row(
-          children: [
-            Text(
-              'Yearly',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            Container(
-              margin: const EdgeInsets.only(left: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.green,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text(
-                'Save 16%',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+  // Widget _buildPricingToggle(BuildContext context) {
+  //   // This is just a visual representation - for a real implementation
+  //   // you would track the state and update plan prices accordingly
+  //   return Row(
+  //     mainAxisSize: MainAxisSize.min,
+  //     children: [
+  //       Text(
+  //         'Monthly',
+  //         style: Theme.of(context).textTheme.titleMedium?.copyWith(
+  //           fontWeight: FontWeight.bold,
+  //         ),
+  //       ),
+  //       Switch(
+  //         value: false, // default to monthly
+  //         onChanged: (value) {
+  //           // Toggle between monthly and yearly
+  //         },
+  //         activeColor: Theme.of(context).colorScheme.primary,
+  //       ),
+  //       Row(
+  //         children: [
+  //           Text(
+  //             'Yearly',
+  //             style: Theme.of(context).textTheme.titleMedium,
+  //           ),
+  //           Container(
+  //             margin: const EdgeInsets.only(left: 8),
+  //             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+  //             decoration: BoxDecoration(
+  //               color: Colors.green,
+  //               borderRadius: BorderRadius.circular(12),
+  //             ),
+  //             child: const Text(
+  //               'Save 16%',
+  //               style: TextStyle(
+  //                 color: Colors.white,
+  //                 fontWeight: FontWeight.bold,
+  //                 fontSize: 12,
+  //               ),
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ],
+  //   );
+  // }
   
   Widget _buildCurrentSubscription(BuildContext context, SubscriptionProvider provider) {
     final status = provider.subscriptionStatus;

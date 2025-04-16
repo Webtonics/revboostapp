@@ -247,7 +247,7 @@ class AppTheme {
     final ThemeData base = ThemeData.dark();
     const ColorScheme colorScheme = ColorScheme(
       brightness: Brightness.dark,
-      primary: AppColors.primary,
+      primary: Color.fromARGB(255, 255, 255, 255),
       onPrimary: Colors.white,
       secondary: AppColors.purple,
       onSecondary: Colors.white,

@@ -126,7 +126,7 @@ class _LemonSqueezyWebViewState extends State<LemonSqueezyWebView> {
   void openExternalCheckout() {
     // Use JavaScript interop to open the URL in a new tab
     // This requires dart:html which should be conditionally imported
-    // js.context.callMethod('open', [_checkoutUrl, '_blank']);
+    js.context.callMethod('open', [_checkoutUrl, '_blank']);
     if (_checkoutUrl.isNotEmpty) {
       // Use JavaScript interop to open in a new tab
      kIsWeb? js.context.callMethod('open', [_checkoutUrl, '_blank']): null;

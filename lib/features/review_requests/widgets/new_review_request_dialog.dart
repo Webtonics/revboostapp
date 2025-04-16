@@ -199,111 +199,111 @@ class _NewReviewRequestDialogState extends State<NewReviewRequestDialog> {
                   const SizedBox(height: 24),
                   
                   // Email settings (reply-to)
-                  SwitchListTile(
-                    title: const Text('Send from no-reply address'),
-                    subtitle: Text(
-                      _useBusinessEmail 
-                          ? 'Emails will be sent from our system' 
-                          : 'Replies will go to your business email',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: theme.brightness == Brightness.dark
-                            ? Colors.grey[400]
-                            : Colors.grey[600],
-                      ),
-                    ),
-                    value: _useBusinessEmail,
-                    onChanged: (value) {
-                      setState(() {
-                        _useBusinessEmail = value;
-                      });
-                    },
-                    activeColor: theme.primaryColor,
-                  ),
+                  // SwitchListTile(
+                  //   title: const Text('Send from no-reply address'),
+                  //   subtitle: Text(
+                  //     _useBusinessEmail 
+                  //         ? 'Emails will be sent from our system' 
+                  //         : 'Replies will go to your business email',
+                  //     style: TextStyle(
+                  //       fontSize: 12,
+                  //       color: theme.brightness == Brightness.dark
+                  //           ? Colors.grey[400]
+                  //           : Colors.grey[600],
+                  //     ),
+                  //   ),
+                  //   value: _useBusinessEmail,
+                  //   onChanged: (value) {
+                  //     setState(() {
+                  //       _useBusinessEmail = value;
+                  //     });
+                  //   },
+                  //   activeColor: theme.primaryColor,
+                  // ),
                   
                   const SizedBox(height: 24),
                   
                   // Preview of the email that will be sent
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: theme.brightness == Brightness.dark
-                          ? Colors.grey[800]
-                          : Colors.grey[100],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: theme.brightness == Brightness.dark
-                            ? Colors.grey[700]!
-                            : Colors.grey[300]!,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Email Preview',
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Text(
-                              'From:',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: theme.brightness == Brightness.dark
-                                    ? Colors.grey[400]
-                                    : Colors.grey[600],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _useBusinessEmail
-                                    ? '${widget.business.name} <no-reply@revboostapp.com>'
-                                    // : '${widget.business.name} <${widget.business.ownerEmail}>',
-                                    : '${widget.business.name} <no-reply@revboostapp.com>',
-                                style: TextStyle(
-                                  color: theme.brightness == Brightness.dark
-                                      ? Colors.grey[300]
-                                      : Colors.grey[700],
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Text(
-                              'Subject:',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: theme.brightness == Brightness.dark
-                                    ? Colors.grey[400]
-                                    : Colors.grey[600],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'We\'d love to hear your feedback!',
-                                style: TextStyle(
-                                  color: theme.brightness == Brightness.dark
-                                      ? Colors.grey[300]
-                                      : Colors.grey[700],
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+                  // Container(
+                  //   padding: const EdgeInsets.all(12),
+                  //   decoration: BoxDecoration(
+                  //     color: theme.brightness == Brightness.dark
+                  //         ? Colors.grey[800]
+                  //         : Colors.grey[100],
+                  //     borderRadius: BorderRadius.circular(8),
+                  //     border: Border.all(
+                  //       color: theme.brightness == Brightness.dark
+                  //           ? Colors.grey[700]!
+                  //           : Colors.grey[300]!,
+                  //     ),
+                  //   ),
+                  //   child: Column(
+                  //     crossAxisAlignment: CrossAxisAlignment.start,
+                  //     children: [
+                  //       Text(
+                  //         'Email Preview',
+                  //         style: theme.textTheme.titleSmall?.copyWith(
+                  //           fontWeight: FontWeight.bold,
+                  //         ),
+                  //       ),
+                  //       const SizedBox(height: 8),
+                  //       Row(
+                  //         children: [
+                  //           Text(
+                  //             'From:',
+                  //             style: TextStyle(
+                  //               fontWeight: FontWeight.bold,
+                  //               color: theme.brightness == Brightness.dark
+                  //                   ? Colors.grey[400]
+                  //                   : Colors.grey[600],
+                  //             ),
+                  //           ),
+                  //           const SizedBox(width: 8),
+                  //           Expanded(
+                  //             child: Text(
+                  //               _useBusinessEmail
+                  //                   ? '${widget.business.name} <reviiew@revboostapp.com>'
+                  //                   // : '${widget.business.name} <${widget.business.ownerEmail}>',
+                  //                   : '${widget.business.name} <no-reply@revboostapp.com>',
+                  //               style: TextStyle(
+                  //                 color: theme.brightness == Brightness.dark
+                  //                     ? Colors.grey[300]
+                  //                     : Colors.grey[700],
+                  //               ),
+                  //               overflow: TextOverflow.ellipsis,
+                  //             ),
+                  //           ),
+                  //         ],
+                  //       ),
+                  //       const SizedBox(height: 4),
+                  //       Row(
+                  //         children: [
+                  //           Text(
+                  //             'Subject:',
+                  //             style: TextStyle(
+                  //               fontWeight: FontWeight.bold,
+                  //               color: theme.brightness == Brightness.dark
+                  //                   ? Colors.grey[400]
+                  //                   : Colors.grey[600],
+                  //             ),
+                  //           ),
+                  //           const SizedBox(width: 8),
+                  //           Expanded(
+                  //             child: Text(
+                  //               'We\'d love to hear your feedback!',
+                  //               style: TextStyle(
+                  //                 color: theme.brightness == Brightness.dark
+                  //                     ? Colors.grey[300]
+                  //                     : Colors.grey[700],
+                  //               ),
+                  //               overflow: TextOverflow.ellipsis,
+                  //             ),
+                  //           ),
+                  //         ],
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
                   
                   const SizedBox(height: 24),
                   

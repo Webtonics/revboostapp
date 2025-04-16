@@ -81,7 +81,7 @@ Future<void> _handleLogin() async {
       
       if (authStatus == AuthStatus.authenticated) {
         // Force navigation when authenticated
-        context.go(AppRoutes.splash);
+        context.go(AppRoutes.dashboard);
       } else {
         setState(() {
           _isLoading = false;

@@ -25,12 +25,18 @@ class SubscriptionStatus {
   final String? planId;
   final DateTime? expiresAt;
   final String? orderId;
+  final String? customerId;
+  final bool isFreeTrial;
+  final DateTime? trialEndDate;
   
   SubscriptionStatus({
     required this.isActive,
     this.planId,
     this.expiresAt,
     this.orderId,
+    this.customerId,
+    this.isFreeTrial = false,
+    this.trialEndDate,
   });
   
   factory SubscriptionStatus.free() {
@@ -39,6 +45,9 @@ class SubscriptionStatus {
       planId: null,
       expiresAt: null,
       orderId: null,
+      customerId: null,
+      isFreeTrial: false,
+      trialEndDate: null,
     );
   }
 }

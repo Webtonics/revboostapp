@@ -17,6 +17,7 @@ import 'package:revboostapp/features/settings/settings_screen.dart';
 import 'package:revboostapp/features/splash/screens/splash_screen.dart';
 import 'package:revboostapp/features/subscription/screens/subscription_screen.dart';
 import 'package:revboostapp/providers/auth_provider.dart';
+import 'package:revboostapp/providers/subscription_provider.dart';
 import 'package:revboostapp/widgets/layout/app_bar_with_theme_toggle.dart';
 import 'package:revboostapp/widgets/layout/app_layout.dart';
 
@@ -166,7 +167,23 @@ class AppRouter {
             return AppRoutes.businessSetup;
           }
         }
-        
+        // Check subscription status for premium routes
+        final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+        final hasActiveSubscription = subscriptionProvider.isSubscribed;
+        final isFreeTrial = subscriptionProvider.isFreeTrial; // We'll add this method
+
+        // List of premium routes that require subscription
+        final premiumRoutes = [
+          AppRoutes.qrCode,
+          AppRoutes.reviewRequests,
+          // Add other premium routes
+        ];
+
+        // Only check subscription for premium routes
+        if (premiumRoutes.contains(currentPath) && !hasActiveSubscription && !isFreeTrial) {
+          // Redirect to subscription page
+          return AppRoutes.subscription;
+        }
         // Allow access to all other routes for authenticated users
         return null;
       },

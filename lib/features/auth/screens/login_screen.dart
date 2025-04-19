@@ -81,7 +81,7 @@ Future<void> _handleLogin() async {
       
       if (authStatus == AuthStatus.authenticated) {
         // Force navigation when authenticated
-        context.go(AppRoutes.dashboard);
+        context.go(AppRoutes.splash);
       } else {
         setState(() {
           _isLoading = false;
@@ -276,19 +276,19 @@ Future<void> _handleLogin() async {
                             const SizedBox(height: 16),
                             
                             // Sign in with Google button
-                            OutlinedButton.icon(
-                              onPressed: () {
-                                // Implement Google Sign In
-                              },
-                              icon: Image.asset(
-                                'assets/icons/google_icon.png',
-                                height: 18,
-                              ),
-                              label: const Text('Sign in with Google'),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                              ),
-                            ),
+                            // OutlinedButton.icon(
+                            //   onPressed: () {
+                            //     // Implement Google Sign In
+                            //   },
+                            //   icon: Image.asset(
+                            //     'assets/icons/google_icon.png',
+                            //     height: 18,
+                            //   ),
+                            //   label: const Text('Sign in with Google'),
+                            //   style: OutlinedButton.styleFrom(
+                            //     padding: const EdgeInsets.symmetric(vertical: 12),
+                            //   ),
+                            // ),
                           ],
                         ),
                       ),

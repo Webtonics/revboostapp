@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:revboostapp/models/subscription_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class SubscriptionProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -13,9 +15,16 @@ class SubscriptionProvider with ChangeNotifier {
   String? _errorMessage;
   SubscriptionStatus _subscriptionStatus = SubscriptionStatus.free();
   List<SubscriptionPlan> _availablePlans = [];
+
+  bool _isFreeTrial = false;
+  DateTime? _trialEndDate;
+
+  bool get isFreeTrial => _isFreeTrial;
+  DateTime? get trialEndDate => _trialEndDate;
   
   // Your Lemon Squeezy store details
-  final String _storeId = 'your-store-name'; // Replace with your store ID
+  final String _storeId = '165054'; // Your store ID
+  final String _baseCheckoutUrl = 'https://webtonics.lemonsqueezy.com/buy';
   
   // Getters
   bool get isLoading => _isLoading;
@@ -40,15 +49,12 @@ class SubscriptionProvider with ChangeNotifier {
         price: 9.99,
         interval: 'monthly',
         features: [
-          // 'Unlimited review requests',
           'Custom QR codes',
           'Negative Review Filtering',
           'Private feedback collection',
-          // 'Advanced review analytics',
           'Priority support',
         ],
-        // lemonSqueezyProductId: '15054cf1-8e60-4160-b793-b2bd7dfc3811', // live
-        lemonSqueezyProductId: '5411962e-7695-4cb0-9f79-271fbc0c2964', //test
+        lemonSqueezyProductId: '5411962e-7695-4cb0-9f79-271fbc0c2964', // Test product ID
       ),
       SubscriptionPlan(
         id: 'monthly',
@@ -61,11 +67,9 @@ class SubscriptionProvider with ChangeNotifier {
           'Custom QR codes',
           'Email & SMS review invites',
           'Private feedback collection',
-          // 'Advanced review analytics',
           'Priority support',
         ],
-        // lemonSqueezyProductId: '15054cf1-8e60-4160-b793-b2bd7dfc3811', // live
-        lemonSqueezyProductId: '5411962e-7695-4cb0-9f79-271fbc0c2964', //test
+        lemonSqueezyProductId: '5411962e-7695-4cb0-9f79-271fbc0c2964', // Test product ID
       ),
       SubscriptionPlan(
         id: 'yearly',
@@ -76,65 +80,106 @@ class SubscriptionProvider with ChangeNotifier {
         features: [
           'Everything in Pro Monthly',
           '16% discount vs monthly plan',
-          // 'Advanced review analytics',
-          // 'Custom branding options',
           'Priority 24/7 support',
           'Dedicated account manager',
         ],
-        // lemonSqueezyProductId: '97989c2f-9926-4324-9801-71fe40267186', 
-        lemonSqueezyProductId: 'b5efc2ff-8c50-4d47-a34a-5e317feea837', 
+        lemonSqueezyProductId: 'b5efc2ff-8c50-4d47-a34a-5e317feea837', // Test product ID
       ),
     ];
   }
   
-  // Load subscription status from Firestore
-  Future<void> _loadSubscriptionStatus() async {
-    if (_auth.currentUser == null) {
+  // Method to load subscription status
+  // In your loadSubscriptionStatus or reloadSubscriptionStatus method
+Future<void> _loadSubscriptionStatus() async {
+  if (_auth.currentUser == null) {
+    _subscriptionStatus = SubscriptionStatus.free();
+    notifyListeners();
+    return;
+  }
+  
+  try {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    
+    final userId = _auth.currentUser!.uid;
+    
+    // Get user document
+    final userDoc = await _firestore.collection('users').doc(userId).get();
+    
+    if (!userDoc.exists) {
       _subscriptionStatus = SubscriptionStatus.free();
+      _isLoading = false;
       notifyListeners();
       return;
     }
     
+    final userData = userDoc.data()!;
+    
+    // Check subscription status
+    final status = userData['subscriptionStatus'] as String?;
+    final isActive = status == 'active' || status == 'on_trial';
+    
+    // Check for free trial
+    final isFreeTrial = status == 'on_trial';
+    final trialEndDate = userData['trialEndDate'] != null
+        ? (userData['trialEndDate'] as Timestamp).toDate()
+        : null;
+    
+    // Handle the orderId properly - convert to string if needed
+    String? orderId;
+    if (userData['subscriptionOrderId'] != null) {
+      // Convert to string regardless of original type
+      orderId = userData['subscriptionOrderId'].toString();
+    }
+    
+    final planId = userData['subscriptionPlanId'] as String?;
+    final expiresAt = userData['subscriptionEndDate'] != null
+        ? (userData['subscriptionEndDate'] as Timestamp).toDate()
+        : null;
+    
+    // Get customerId and ensure it's a string
+    String? customerId;
+    if (userData['lemonSqueezyCustomerId'] != null) {
+      customerId = userData['lemonSqueezyCustomerId'].toString();
+    }
+    
+    _subscriptionStatus = SubscriptionStatus(
+      isActive: isActive,
+      planId: planId,
+      expiresAt: expiresAt,
+      orderId: orderId,
+      customerId: customerId,
+      isFreeTrial: isFreeTrial,
+      trialEndDate: trialEndDate,
+    );
+    
+    _isLoading = false;
+    notifyListeners();
+  } catch (e) {
+    _isLoading = false;
+    _errorMessage = 'Error loading subscription status: $e';
+    notifyListeners();
+  }
+}
+  // Save customer ID to shared preferences
+  Future<void> _saveCustomerId(String customerId) async {
     try {
-      _isLoading = true;
-      _errorMessage = null;
-      notifyListeners();
-      
-      final userId = _auth.currentUser!.uid;
-      
-      // Get user document
-      final userDoc = await _firestore.collection('users').doc(userId).get();
-      
-      if (!userDoc.exists) {
-        _subscriptionStatus = SubscriptionStatus.free();
-        _isLoading = false;
-        notifyListeners();
-        return;
-      }
-      
-      final userData = userDoc.data()!;
-      
-      // Check subscription status
-      final isActive = userData['subscriptionStatus'] == 'active';
-      final planId = userData['subscriptionPlanId'] as String?;
-      final expiresAt = userData['subscriptionEndDate'] != null
-          ? (userData['subscriptionEndDate'] as Timestamp).toDate()
-          : null;
-      final orderId = userData['subscriptionOrderId'] as String?;
-      
-      _subscriptionStatus = SubscriptionStatus(
-        isActive: isActive,
-        planId: planId,
-        expiresAt: expiresAt,
-        orderId: orderId,
-      );
-      
-      _isLoading = false;
-      notifyListeners();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('lemonSqueezyCustomerId', customerId);
     } catch (e) {
-      _isLoading = false;
-      _errorMessage = 'Error loading subscription status: $e';
-      notifyListeners();
+      print('Error saving customer ID: $e');
+    }
+  }
+  
+  // Get customer ID from shared preferences
+  Future<String?> _getCustomerId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('lemonSqueezyCustomerId');
+    } catch (e) {
+      print('Error getting customer ID: $e');
+      return null;
     }
   }
   
@@ -144,47 +189,61 @@ class SubscriptionProvider with ChangeNotifier {
   }
   
   // Get the checkout URL for a specific plan
-//   String getCheckoutUrl(String planId) {
-//   final plan = _availablePlans.firstWhere(
-//     (plan) => plan.id == planId,
-//     orElse: () => throw Exception('Plan not found'),
-//   );
-  
-//   // Get the user's email for identification
-//   final userEmail = _auth.currentUser?.email ?? '';
-//   if (userEmail.isEmpty) {
-//     throw Exception('User email required for checkout');
-//   }
-  
-//   // Create checkout URL with user email for identification
-//   // return 'https://webtonics.lemonsqueezy.com/buy/${plan.lemonSqueezyProductId}?checkout[email]=$userEmail';
-// }
-String getCheckoutUrl(String planId) {
-  final plan = _availablePlans.firstWhere(
-    (plan) => plan.id == planId,
-    orElse: () => throw Exception('Plan not found'),
-  );
-  
-  // Get the user's email for identification (still useful to pre-fill)
-  final userEmail = _auth.currentUser?.email ?? '';
-  
-  // Use the direct hosted checkout URL format
-  // The format is like: https://webtonics.lemonsqueezy.com/buy/97989c2f-9926-4324-9801-71fe40267186
-  
-  if (plan.lemonSqueezyProductId.isEmpty) {
-    throw Exception('Invalid product checkout URL');
+  String getCheckoutUrl(String planId) {
+    final plan = _availablePlans.firstWhere(
+      (plan) => plan.id == planId,
+      orElse: () => throw Exception('Plan not found'),
+    );
+    
+    if (plan.lemonSqueezyProductId.isEmpty) {
+      throw Exception('Invalid product checkout URL');
+    }
+    
+    // Get the user's email for identification
+    final userEmail = _auth.currentUser?.email ?? '';
+    
+    // Build checkout URL with parameters
+    final baseUrl = '$_baseCheckoutUrl/${plan.lemonSqueezyProductId}';
+    final checkoutUrl = Uri.parse(baseUrl).replace(
+      queryParameters: {
+        'checkout[email]': userEmail,
+        'checkout[custom][user_id]': _auth.currentUser?.uid ?? '',
+        'checkout[custom][plan_id]': planId,
+        'checkout[custom][app_version]': '1.0',
+        'embed': '1', // For embedded checkout, if supported
+      },
+    ).toString();
+    
+    return checkoutUrl;
   }
   
-  // For prefilling the email (optional)
-  return 'https://webtonics.lemonsqueezy.com/buy/${plan.lemonSqueezyProductId}';
-}
-  
   // Get customer portal URL
-  String getCustomerPortalUrl() {
-    // This is a simple way to access the customer portal
-    // The user's email must match what was used during checkout
+  Future<String> getCustomerPortalUrl() async {
+    // Use the customer ID if possible
+    final customerId = await _getCustomerId() ?? 
+                     _subscriptionStatus.customerId;
+    
+    if (customerId != null) {
+      return 'https://$_storeId.lemonsqueezy.com/billing?customer_id=$customerId';
+    }
+    
+    // Fall back to email
     final userEmail = _auth.currentUser?.email ?? '';
     return 'https://$_storeId.lemonsqueezy.com/billing?customer_email=$userEmail';
+  }
+  
+  // For testing - simulates a subscription status check
+  Future<bool> checkSubscriptionStatus() async {
+    if (_auth.currentUser == null) return false;
+    
+    try {
+      await reloadSubscriptionStatus();
+      return _subscriptionStatus.isActive;
+    } catch (e) {
+      _errorMessage = 'Error checking subscription: $e';
+      notifyListeners();
+      return false;
+    }
   }
   
   // For testing - simulates cancellation

@@ -171,6 +171,8 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
         );
         
         // Calculate position for share sheet
+      
+      
         final box = context.findRenderObject() as RenderBox?;
         final sharePosition = box == null
             ? null

@@ -302,19 +302,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             const SizedBox(height: 16),
                             
                             // Sign up with Google button
-                            OutlinedButton.icon(
-                              onPressed: () {
-                                // Implement Google Sign In
-                              },
-                              icon: Image.asset(
-                                'assets/icons/google_icon.png',
-                                height: 18,
-                              ),
-                              label: const Text('Sign up with Google'),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                              ),
-                            ),
+                            // OutlinedButton.icon(
+                            //   onPressed: () {
+                            //     // Implement Google Sign In
+                            //   },
+                            //   icon: Image.asset(
+                            //     'assets/icons/google_icon.png',
+                            //     height: 18,
+                            //   ),
+                            //   label: const Text('Sign up with Google'),
+                            //   style: OutlinedButton.styleFrom(
+                            //     padding: const EdgeInsets.symmetric(vertical: 12),
+                            //   ),
+                            // ),
                           ],
                         ),
                       ),

@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:revboostapp/features/subscription/widgets/lemon_squeezy_webview.dart';
+import 'package:revboostapp/features/subscription/widgets/lemon_squeezy_checkout.dart';
 import 'package:revboostapp/models/subscription_model.dart';
 import 'package:revboostapp/providers/auth_provider.dart';
 import 'package:revboostapp/providers/subscription_provider.dart';
@@ -26,7 +26,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     return AppLayout(
       title: 'Subscription',
       child: _showWebView
-          ? LemonSqueezyWebView(
+          ? LemonSqueezyCheckout(
               planId: _selectedPlanId,
               onComplete: (success) {
                 setState(() {
@@ -454,7 +454,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               child: OutlinedButton.icon(
                 onPressed: () {
                   final url = provider.getCustomerPortalUrl();
-                  launchUrl(Uri.parse(url));
+                  launchUrl(Uri.parse(url as String));
                 },
                 icon: const Icon(Icons.settings),
                 label: const Text('Manage Subscription'),

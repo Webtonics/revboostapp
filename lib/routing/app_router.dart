@@ -34,6 +34,7 @@ class AppRoutes {
   static const String reviewRequests = '/review-requests';
   static const String contacts = '/contacts';
   static const String qrCode = '/qr-code';
+  static const String feedback = '/feedback';
   static const String templates = '/templates';
   static const String settings = '/settings';
   static const String subscription = '/subscription';
@@ -237,6 +238,10 @@ class AppRouter {
         GoRoute(
           path: AppRoutes.templates,
           builder: (context, state) => const AppLayout(title: "Templates", child: PlaceholderScreen(title: 'Templates')),
+        ),
+        GoRoute(
+          path: AppRoutes.feedback,
+          builder: (context, state) => const AppLayout(title: "Feedback", child: PlaceholderScreen(title: 'Feedback')),
         ),
         GoRoute(
           path: AppRoutes.settings,

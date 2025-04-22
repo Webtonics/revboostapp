@@ -65,12 +65,12 @@ class MyApp extends StatelessWidget {
       ],
       child: Builder(
         builder: (context) {
-          final themeProvider = Provider.of<ThemeProvider>(context);
+          // final themeProvider = Provider.of<ThemeProvider>(context);
           return MaterialApp.router(
             title: 'RevBoost',
             theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
-            themeMode: themeProvider.themeMode,
+            // darkTheme: AppTheme.darkTheme,
+            // themeMode: themeProvider.themeMode,
             routerConfig: AppRouter.router,
             debugShowCheckedModeBanner: false,
           );

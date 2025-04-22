@@ -27,6 +27,7 @@ class AppRoutes {
   static const String onboarding = '/onboarding';
   static const String login = '/login';
   static const String register = '/register';
+  static const String verification = '/verification';
   static const String forgotPassword = '/forgot-password';
   static const String emailVerification = '/email-verification'; // New route
   static const String businessSetup = '/business-setup';
@@ -38,6 +39,7 @@ class AppRoutes {
   static const String templates = '/templates';
   static const String settings = '/settings';
   static const String subscription = '/subscription';
+  static const String authAction = '/auth/action';
   
   // Customer-facing routes
   static const String reviewPage = '/r/:businessId';
@@ -110,7 +112,7 @@ class AppRouter {
         final isOnAuthPage = 
             currentPath == AppRoutes.login || 
             currentPath == AppRoutes.register || 
-            currentPath == AppRoutes.forgotPassword;
+            currentPath == AppRoutes.forgotPassword ;
         
         // Not logged in -> go to login
         if (!isAuthenticated) {
@@ -256,6 +258,37 @@ class AppRouter {
           builder: (context, state) {
             final businessId = state.pathParameters['businessId'] ?? '';
             return PublicReviewScreen(businessId: businessId);
+          },
+        ),
+
+        
+        GoRoute(
+          path: AppRoutes.authAction,
+          builder: (context, state) {
+            // Extract the action parameters from the URL
+            final mode = state.uri.queryParameters['mode'];
+            final oobCode = state.uri.queryParameters['oobCode'];
+            final continueUrl = state.uri.queryParameters['continueUrl'];
+            
+            // Handle the different Firebase auth actions
+            if (mode == 'verifyEmail' && oobCode != null) {
+              return EmailVerificationScreen(
+                mode: mode,
+                oobCode: oobCode,
+                continueUrl: continueUrl,
+                isHandlingActionUrl: true,
+              );
+            } else if (mode == 'resetPassword' && oobCode != null) {
+              return ForgotPasswordScreen(); // Pass oobCode if your screen handles it
+            } else {
+              // Handle invalid or unsupported action
+              return Scaffold(
+                appBar: AppBar(title: const Text('Invalid Action')),
+                body: const Center(
+                  child: Text('The authentication action link is invalid or expired.'),
+                ),
+              );
+            }
           },
         ),
       ],

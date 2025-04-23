@@ -91,7 +91,7 @@ class AppRouter {
         // Get auth provider
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
         final currentPath = state.matchedLocation;
-        
+         debugPrint('URL requested: ${state.uri.toString()}');
         // Don't redirect during loading or on splash
         if (authProvider.status == AuthStatus.loading || 
             authProvider.status == AuthStatus.initial ||
@@ -99,6 +99,10 @@ class AppRouter {
           return null;
         }
         
+        if (state.uri.path == '/auth/action') {
+          debugPrint('Skipping redirect for auth action URL');
+          return null;
+        }
         // Always allow public review pages
         if (currentPath.startsWith('/r/')) {
           return null;
@@ -265,12 +269,18 @@ class AppRouter {
         GoRoute(
           path: AppRoutes.authAction,
           builder: (context, state) {
-            // Extract the action parameters from the URL
+            // Debug logging
+            debugPrint('Auth action route hit: ${state.uri.toString()}');
+            
+            // Extract parameters
             final mode = state.uri.queryParameters['mode'];
             final oobCode = state.uri.queryParameters['oobCode'];
             final continueUrl = state.uri.queryParameters['continueUrl'];
             
-            // Handle the different Firebase auth actions
+            // More debug info
+            debugPrint('Auth params: mode=$mode, code present=${oobCode != null}');
+            
+            // Check parameters
             if (mode == 'verifyEmail' && oobCode != null) {
               return EmailVerificationScreen(
                 mode: mode,
@@ -279,13 +289,23 @@ class AppRouter {
                 isHandlingActionUrl: true,
               );
             } else if (mode == 'resetPassword' && oobCode != null) {
-              return ForgotPasswordScreen(); // Pass oobCode if your screen handles it
+              return const ForgotPasswordScreen(); 
             } else {
-              // Handle invalid or unsupported action
               return Scaffold(
-                appBar: AppBar(title: const Text('Invalid Action')),
-                body: const Center(
-                  child: Text('The authentication action link is invalid or expired.'),
+                appBar: AppBar(title: const Text('Authentication')),
+                body: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('Invalid or expired action link'),
+                      Text('Debug info: mode=$mode, oobCode=${oobCode?.substring(0, 5) ?? "null"}'),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: () => context.go(AppRoutes.login),
+                        child: const Text('Return to Login'),
+                      )
+                    ],
+                  ),
                 ),
               );
             }

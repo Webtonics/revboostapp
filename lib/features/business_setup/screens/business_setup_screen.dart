@@ -344,10 +344,10 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
       _isLoading = false;
     });
     // if (!mounted) return;
-    context.go(AppRoutes.splash);
+    context.go(AppRoutes.dashboard);
     if (mounted) {
       // Navigate directly to dashboard
-      context.go(AppRoutes.splash);
+      context.go(AppRoutes.dashboard);
     }
   } catch (e) {
     setState(() {

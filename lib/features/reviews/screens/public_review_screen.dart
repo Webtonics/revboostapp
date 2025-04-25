@@ -807,7 +807,7 @@ class _PublicReviewScreenState extends State<PublicReviewScreen> with SingleTick
                                   child: Icon(
                                     _rating >= starValue ? Icons.star_rounded : Icons.star_outline_rounded,
                                     color: _rating >= starValue ? Colors.amber[400] : Colors.grey[300],
-                                    size: 56,
+                                    size: 35,
                                     shadows: _rating >= starValue ? [
                                       BoxShadow(
                                         color: Colors.amber.withOpacity(0.3),

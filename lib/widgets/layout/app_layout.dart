@@ -213,13 +213,13 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
                     isSmallScreen: isSmallScreen,
                     isSidebarCollapsed: _isSidebarCollapsed,
                   ),
-                  // _buildNavItem(
-                  //   icon: Icons.qr_code_rounded,
-                  //   title: 'Feedback',
-                  //   route: AppRoutes.feedback,
-                  //   isSmallScreen: isSmallScreen,
-                  //   isSidebarCollapsed: _isSidebarCollapsed,
-                  // ),
+                  _buildNavItem(
+                    icon: Icons.feedback_rounded,
+                    title: 'Feedback',
+                    route: AppRoutes.feedback,
+                    isSmallScreen: isSmallScreen,
+                    isSidebarCollapsed: _isSidebarCollapsed,
+                  ),
                   
                   // Divider for settings section
                   if (!_isSidebarCollapsed || isSmallScreen)

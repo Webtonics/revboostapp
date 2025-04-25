@@ -121,28 +121,28 @@ class _NewReviewRequestDialogState extends State<NewReviewRequestDialog> {
                   const SizedBox(height: 24),
                   
                   // Error message
-                  if (_errorMessage != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.error_outline, color: Colors.red),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              _errorMessage!,
-                              style: const TextStyle(color: Colors.red),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
+                  // if (_errorMessage != null) ...[
+                  //   Container(
+                  //     padding: const EdgeInsets.all(12),
+                  //     decoration: BoxDecoration(
+                  //       color: Colors.red.withOpacity(0.1),
+                  //       borderRadius: BorderRadius.circular(8),
+                  //     ),
+                  //     child: Row(
+                  //       children: [
+                  //         const Icon(Icons.error_outline, color: Colors.red),
+                  //         const SizedBox(width: 12),
+                  //         Expanded(
+                  //           child: Text(
+                  //             _errorMessage!,
+                  //             style: const TextStyle(color: Colors.red),
+                  //           ),
+                  //         ),
+                  //       ],
+                  //     ),
+                    // ),
+                    // const SizedBox(height: 24),
+                  // ],
                   
                   // Name field
                   TextFormField(

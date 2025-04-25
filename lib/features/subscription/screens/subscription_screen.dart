@@ -452,9 +452,58 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             // Manage subscription button
             Center(
               child: OutlinedButton.icon(
-                onPressed: () {
-                  final url = provider.getCustomerPortalUrl();
-                  launchUrl(Uri.parse(url as String));
+                onPressed: () async {
+                  try {
+                    // Show loading indicator
+                    const loadingSnackBar = SnackBar(
+                      content: Row(
+                        children: [
+                          CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            strokeWidth: 2,
+                          ),
+                          SizedBox(width: 16),
+                          Text('Opening subscription portal...'),
+                        ],
+                      ),
+                      duration: Duration(seconds: 10),
+                    );
+                    
+                    final snackBarController = 
+                        ScaffoldMessenger.of(context).showSnackBar(loadingSnackBar);
+                    
+                    // Get portal URL
+                    final url = await provider.getCustomerPortalUrl();
+                    
+                    // Log the URL for debugging
+                    print('Customer portal URL: $url');
+                    
+                    // Hide loading indicator
+                    snackBarController.close();
+                    
+                    // Try to launch URL
+                    if (await canLaunchUrl(Uri.parse(url))) {
+                      await launchUrl(
+                        Uri.parse(url),
+                        mode: LaunchMode.externalApplication
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Could not open subscription portal. Please contact support.'),
+                          backgroundColor: Colors.red,
+                        )
+                      );
+                    }
+                  } catch (e) {
+                    print('Error opening customer portal: $e');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error: ${e.toString()}'),
+                        backgroundColor: Colors.red,
+                      )
+                    );
+                  }
                 },
                 icon: const Icon(Icons.settings),
                 label: const Text('Manage Subscription'),

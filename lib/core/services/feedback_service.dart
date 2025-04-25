@@ -217,4 +217,15 @@ class FeedbackService {
       debugPrint('Error updating business feedback stats: $e');
     }
   }
+
+  Future<List<FeedbackModel>> getFeedbackForBusinessOnce(String businessId) async {
+  final snapshot = await _firestore
+      .collection('feedbacks')
+      .where('businessId', isEqualTo: businessId)
+      .get();
+
+  return snapshot.docs.map((doc) {
+    return FeedbackModel.fromFirestore(doc.data() as DocumentSnapshot<Object?>);
+  }).toList();
+}
 }

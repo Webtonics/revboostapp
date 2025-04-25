@@ -42,20 +42,20 @@ class SubscriptionProvider with ChangeNotifier {
   void _initializePlans() {
     // Define your subscription plans with real product IDs
     _availablePlans = [
-      SubscriptionPlan(
-        id: 'free',
-        name: 'Startup',
-        description: 'Full access to all premium features',
-        price: 9.99,
-        interval: 'monthly',
-        features: [
-          'Custom QR codes',
-          'Negative Review Filtering',
-          'Private feedback collection',
-          'Priority support',
-        ],
-        lemonSqueezyProductId: '5411962e-7695-4cb0-9f79-271fbc0c2964', // Test product ID
-      ),
+      // SubscriptionPlan(
+      //   id: 'free',
+      //   name: 'Startup',
+      //   description: 'Full access to all premium features',
+      //   price: 9.99,
+      //   interval: 'monthly',
+      //   features: [
+      //     'Custom QR codes',
+      //     'Negative Review Filtering',
+      //     'Private feedback collection',
+      //     'Priority support',
+      //   ],
+      //   lemonSqueezyProductId: '5411962e-7695-4cb0-9f79-271fbc0c2964', // Test product ID
+      // ),
       SubscriptionPlan(
         id: 'monthly',
         name: 'Pro',
@@ -218,19 +218,50 @@ Future<void> _loadSubscriptionStatus() async {
   }
   
   // Get customer portal URL
-  Future<String> getCustomerPortalUrl() async {
-    // Use the customer ID if possible
-    final customerId = await _getCustomerId() ?? 
-                     _subscriptionStatus.customerId;
+  // Future<String> getCustomerPortalUrl() async {
+  //   // Use the customer ID if possible
+  //   final customerId = await _getCustomerId() ?? 
+  //                    _subscriptionStatus.customerId;
     
-    if (customerId != null) {
-      return 'https://$_storeId.lemonsqueezy.com/billing?customer_id=$customerId';
-    }
+  //   if (customerId != null) {
+  //     return 'https://$_storeId.lemonsqueezy.com/billing?customer_id=$customerId';
+  //   }
     
-    // Fall back to email
-    final userEmail = _auth.currentUser?.email ?? '';
-    return 'https://$_storeId.lemonsqueezy.com/billing?customer_email=$userEmail';
+  //   // Fall back to email
+  //   final userEmail = _auth.currentUser?.email ?? '';
+  //   return 'https://$_storeId.lemonsqueezy.com/billing?customer_email=$userEmail';
+  // }
+  // Replace your existing getCustomerPortalUrl method with this updated version
+
+Future<String> getCustomerPortalUrl() async {
+  // Check if we have a customerId
+  final customerId = _subscriptionStatus.customerId;
+  final userEmail = _auth.currentUser?.email ?? '';
+  
+  // Log the values for debugging
+  print('Store ID: $_storeId');
+  print('Customer ID: $customerId');
+  print('User Email: $userEmail');
+  
+  // Get your store name - this is different from store ID
+  // Your store ID is numeric (165054), but the URL needs your store's subdomain
+  final storeName = 'webtonics'; // Replace with your actual store name from the URL
+  
+  // Construct the base URL with the correct format
+  final baseUrl = 'https://$storeName.lemonsqueezy.com/billing';
+  
+  // Add appropriate query parameters
+  if (customerId != null && customerId.isNotEmpty) {
+    // Use customer_id parameter for direct lookup
+    return '$baseUrl?customer_id=$customerId';
+  } else if (userEmail.isNotEmpty) {
+    // Fall back to email if no customer ID is available
+    return '$baseUrl?email=${Uri.encodeComponent(userEmail)}';
+  } else {
+    // Fallback if neither is available
+    throw Exception('No customer identifier available for billing portal');
   }
+}
   
   // For testing - simulates a subscription status check
   Future<bool> checkSubscriptionStatus() async {

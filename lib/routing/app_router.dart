@@ -8,6 +8,7 @@ import 'package:revboostapp/features/auth/screens/login_screen.dart';
 import 'package:revboostapp/features/auth/screens/register_screen.dart';
 import 'package:revboostapp/features/business_setup/screens/business_setup_screen.dart';
 import 'package:revboostapp/features/dashboard/screens/dashboard_screen.dart';
+import 'package:revboostapp/features/feedback/screens/feedback_screen.dart';
 import 'package:revboostapp/features/onboarding/screens/onboarding_screen.dart';
 import 'package:revboostapp/features/onboarding/services/onboarding_service.dart';
 import 'package:revboostapp/features/qr_code/screens/qr_code_screen.dart';
@@ -247,7 +248,7 @@ class AppRouter {
         ),
         GoRoute(
           path: AppRoutes.feedback,
-          builder: (context, state) => const AppLayout(title: "Feedback", child: PlaceholderScreen(title: 'Feedback')),
+          builder: (context, state) => const BlockedFeedbackPage(),
         ),
         GoRoute(
           path: AppRoutes.settings,

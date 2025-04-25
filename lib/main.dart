@@ -10,6 +10,7 @@ import 'package:revboostapp/core/theme/app_theme.dart';
 import 'package:revboostapp/providers/auth_provider.dart';
 import 'package:revboostapp/providers/business_setup_provider.dart';
 import 'package:revboostapp/providers/dashboard_provider.dart';
+import 'package:revboostapp/providers/feedback_provider.dart';
 import 'package:revboostapp/providers/settings_provider.dart';
 import 'package:revboostapp/providers/subscription_provider.dart';
 import 'package:revboostapp/providers/theme_provider.dart';
@@ -59,6 +60,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
         ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
+        
         
         // Provide the EmailService
         Provider.value(value: emailService),

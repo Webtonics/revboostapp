@@ -292,72 +292,178 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
 
   // Improved print function
   // Updated _printQrCode function with enhanced design
-Future<void> _printQrCode() async {
+  Future<void> _printQrCode() async {
   if (kIsWeb) {
     try {
-      // Show a loading indicator to prevent UI freeze perception
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Preparing QR code for printing...')),
         );
       }
       
-      // Use a microtask to avoid blocking the UI thread
-      await Future.microtask(() async {
-        // First capture the QR code
-        final Uint8List? pngBytes = await _captureQrCode();
-        if (pngBytes == null) return;
-        
-        // Convert to base64 for embedding in HTML
-        final base64Image = base64Encode(pngBytes);
-        
-        // Create a minimal JavaScript that won't block the main thread
-        final jsScript = '''
-          // Use a separate function to avoid scope issues
-          (function() {
-            // Create a new window with blank content
-            var printWindow = window.open('', '_blank', 'width=500,height=600');
-            
-            if (!printWindow) {
-              console.error('Popup blocked');
-              return;
+      // Capture the QR code as image
+      final boundary = _qrKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        throw Exception("Could not find QR code element");
+      }
+      
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) {
+        throw Exception("Failed to convert QR code to image");
+      }
+      
+      final bytes = byteData.buffer.asUint8List();
+      final base64Image = base64Encode(bytes);
+      
+      // Create HTML with inline CSS for the printout
+      final htmlContent = '''
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>$_businessName - Review QR Code</title>
+          <style>
+            @page {
+              size: A4;
+              margin: 0;
             }
-            
-            // Write very minimal HTML
-            printWindow.document.write(
-              '<html>' +
-              '<head><title>QR Code</title></head>' +
-              '<body style="text-align:center; padding:20px; font-family:Arial,sans-serif;">' +
-              '<div style="margin-bottom:20px;">' + '$_businessName' + '</div>' +
-              '<div style="margin-bottom:20px;">Scan to share your experience</div>' +
-              '<img src="data:image/png;base64,$base64Image" width="280" height="280">' +
-              '<div style="margin-top:20px; font-size:12px;">Powered by RevBoost</div>' +
-              '</body>' +
-              '</html>'
-            );
-            
-            // Close the document stream
-            printWindow.document.close();
-            
-            // Use setTimeout to prevent blocking
+            body {
+              margin: 0;
+              padding: 0;
+              background-color: #f0f0f0;
+              font-family: Arial, sans-serif;
+            }
+            .page {
+              width: 210mm;
+              height: 297mm;
+              padding: 20mm;
+              box-sizing: border-box;
+              position: relative;
+            }
+            .card {
+              background-color: white;
+              border-radius: 12px;
+              box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+              padding: 30px;
+              width: 170mm;
+              height: 257mm;
+              box-sizing: border-box;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: space-between;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 20px;
+              width: 100%;
+            }
+            .business-name {
+              color: #1A73E8;
+              font-size: 28pt;
+              font-weight: bold;
+              margin: 0 0 10px 0;
+            }
+            .subtitle {
+              font-size: 14pt;
+              color: #555;
+              margin: 0 0 5px 0;
+              line-height: 1.4;
+            }
+            .instructions {
+              font-size: 12pt;
+              color: #666;
+              margin: 5px 0 0 0;
+              text-align: center;
+            }
+            .qr-container {
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              margin: 30px 0;
+            }
+            .qr-code {
+              width: 60mm;
+              height: 60mm;
+              padding: 4mm;
+              border: 1px solid #ddd;
+              background-color: white;
+            }
+            .thank-you {
+              font-size: 13pt;
+              color: #555;
+              margin: 15px 0 0 0;
+              font-style: italic;
+            }
+            .footer {
+              text-align: center;
+              color: #777;
+              font-size: 10pt;
+              margin-top: 20px;
+              width: 100%;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="page">
+            <div class="card">
+              <div class="header">
+                <h1 class="business-name">$_businessName</h1>
+                <p class="subtitle">Your opinion matters!</p>
+                <p class="instructions">Scan this QR code to share your experience</p>
+              </div>
+              <div class="qr-container">
+                <img class="qr-code" src="data:image/png;base64,$base64Image" alt="Review QR Code">
+              </div>
+              <p class="thank-you">Thank you for helping us improve!</p>
+              <div class="footer">
+                Powered by RevBoost • www.revboostapp.com
+              </div>
+            </div>
+          </div>
+          <script>
+            // Use a delayed print to ensure resources are loaded
             setTimeout(function() {
               try {
-                printWindow.print();
+                window.print();
+                // Close the window after print dialog is closed (optional)
+                // setTimeout(function() { window.close(); }, 500);
               } catch(e) {
                 console.error('Print error:', e);
               }
-            }, 300);
-          })();
-        ''';
-        
-        // Run the JavaScript in a way that won't block the UI
-        js.context.callMethod('eval', [jsScript]);
-      });
+            }, 500);
+          </script>
+        </body>
+        </html>
+      ''';
+      
+      // JavaScript to open a new window and print the HTML content
+      final jsScript = '''
+        (function() {
+          try {
+            const printWindow = window.open('', '_blank');
+            if (!printWindow) {
+              alert('Please allow pop-ups to print the QR code.');
+              return;
+            }
+            
+            printWindow.document.write(`$htmlContent`);
+            printWindow.document.close();
+          } catch(e) {
+            console.error('Error creating print window:', e);
+            alert('Error preparing print. Please try again.');
+          }
+        })();
+      ''';
+      
+      // Execute the JavaScript
+      js.context.callMethod('eval', [jsScript]);
       
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text('Error preparing QR code: $e')),
         );
       }
     }
@@ -369,6 +475,7 @@ Future<void> _printQrCode() async {
     }
   }
 }
+  
   void _copyLinkToClipboard() {
     Clipboard.setData(ClipboardData(text: _reviewLink));
     if (mounted) {

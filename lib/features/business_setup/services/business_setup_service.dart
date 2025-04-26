@@ -74,9 +74,49 @@ class BusinessSetupService {
   //   }
   // }
   // In the saveBusinessInfo method of BusinessSetupService:
+// Future<String> saveBusinessInfo({
+//   required String name,
+//   required String description,
+//   Map<String, String> reviewLinks = const {},
+// }) async {
+//   try {
+//     final user = _auth.currentUser;
+//     if (user == null) {
+//       throw Exception('User not authenticated');
+//     }
+    
+//     // Create business document
+//     final newBusiness = BusinessModel(
+//       id: '', // Will be set after document creation
+//       ownerId: user.uid,
+//       name: name,
+//       description: description,
+//       reviewLinks: reviewLinks,
+//       createdAt: DateTime.now(),
+//       updatedAt: DateTime.now(),
+//     );
+    
+//     // Save to Firestore
+//     final docRef = await _firestore.collection('businesses').add(
+//       newBusiness.toFirestore(),
+//     );
+    
+//     // Update the user's profile to mark setup as completed
+//     await _firestore.collection('users').doc(user.uid).update({
+//       'hasCompletedSetup': true,
+//       'updatedAt': Timestamp.now(),
+//     });
+    
+//     return docRef.id;
+//   } catch (e) {
+//     debugPrint('Error saving business info: $e');
+//     throw Exception('Failed to save business information: $e');
+//   }
+// }
 Future<String> saveBusinessInfo({
   required String name,
   required String description,
+  String? logoUrl,
   Map<String, String> reviewLinks = const {},
 }) async {
   try {
@@ -91,6 +131,7 @@ Future<String> saveBusinessInfo({
       ownerId: user.uid,
       name: name,
       description: description,
+      logoUrl: logoUrl, // Make logo optional
       reviewLinks: reviewLinks,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
@@ -101,9 +142,10 @@ Future<String> saveBusinessInfo({
       newBusiness.toFirestore(),
     );
     
-    // Update the user's profile to mark setup as completed
+    // Update the user's profile with business info
     await _firestore.collection('users').doc(user.uid).update({
       'hasCompletedSetup': true,
+      'businessIds': FieldValue.arrayUnion([docRef.id]),
       'updatedAt': Timestamp.now(),
     });
     

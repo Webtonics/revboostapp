@@ -70,6 +70,8 @@ dependencies:
   csv: ^6.0.0
   flutter_dotenv: ^5.2.1
   firebase_remote_config: ^5.4.3
+  pdf: ^3.11.3
+  printing: ^5.14.2
   
   
   
@@ -136,6 +138,12 @@ flutter:
   #       - asset: fonts/Schyler-Italic.ttf
   #         style: italic
   #   - family: Trajan Pro
+  fonts:
+    - family: OpenSans
+      fonts:
+        - asset: assets/fonts/OpenSans-Regular.ttf
+        - asset: assets/fonts/OpenSans-Bold.ttf
+          weight: 700
   #     fonts:
   #       - asset: fonts/TrajanPro.ttf
   #       - asset: fonts/TrajanPro_Bold.ttf

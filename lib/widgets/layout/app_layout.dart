@@ -8,6 +8,38 @@ import 'package:revboostapp/providers/auth_provider.dart';
 import 'package:revboostapp/routing/app_router.dart';
 import 'package:revboostapp/widgets/common/theme_toggle.dart';
 
+// Color variables for easy customization
+class AppLayoutColors {
+  // Light theme colors
+  static const Color lightBackground = Color(0xFFF6FAF6);
+  static const Color lightSurface = Colors.white;
+  static const Color lightSidebarBg = Color(0xFF0B5D1E);
+  static const Color lightHeaderBg = Colors.white;
+  static const Color lightDivider = Color(0xFFE3EEE3);
+  static const Color lightText = Color(0xFF1D3B29);
+  static const Color lightTextSecondary = Color(0xFF5C8370);
+  static const Color lightNavItemBg = Color(0xFFEAF5EA);
+  
+  // Dark theme colors
+  static const Color darkBackground = Color(0xFF0A1F14);
+  static const Color darkSurface = Color(0xFF132A1C);
+  static const Color darkSidebarBg = Color(0xFF05140C);
+  static const Color darkHeaderBg = Color(0xFF163526);
+  static const Color darkDivider = Color(0xFF1F3D2A);
+  static const Color darkText = Color(0xFFECF5EF);
+  static const Color darkTextSecondary = Color(0xFFADD6BC);
+  static const Color darkNavItemBg = Color(0xFF25432F);
+  
+  // Accent colors (for both themes)
+  static const Color primaryGreen = Color(0xFF4CAF50);
+  static const Color accentGreenLight = Color(0xFF8BC34A);
+  static const Color accentGreenDark = Color(0xFF2E7D32);
+  static const Color highlightGreen = Color(0xFFB9F6CA);
+  static const Color warningAmber = Color(0xFFFFC107);
+  static const Color errorRed = Color(0xFFE53935);
+  static const Color successGreen = Color(0xFF4CAF50);
+}
+
 class AppLayout extends StatefulWidget {
   final Widget child;
   final String title;
@@ -59,53 +91,125 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
     final isSmallScreen = screenSize.width < 800;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Background colors based on theme
+    final backgroundColor = isDarkMode 
+        ? AppLayoutColors.darkBackground
+        : AppLayoutColors.lightBackground;
     
-    return Scaffold(
-      key: _scaffoldKey,
-      appBar: isSmallScreen 
-          ? _buildMobileAppBar() 
-          : _buildDesktopAppBar(),
-      drawer: isSmallScreen ? _buildSidebar(isSmallScreen) : null,
-      body: Row(
-        children: [
-          // Show sidebar on desktop
-          if (!isSmallScreen) 
+    if (isSmallScreen) {
+      // Mobile layout with drawer
+      return Scaffold(
+        key: _scaffoldKey,
+        appBar: _buildMobileAppBar(),
+        drawer: _buildSidebar(isSmallScreen),
+        body: Container(
+          color: backgroundColor,
+          child: widget.child,
+        ),
+      );
+    } else {
+      // Desktop layout with persistent sidebar
+      return Scaffold(
+        key: _scaffoldKey,
+        body: Row(
+          children: [
+            // Sidebar
             _buildSidebar(isSmallScreen),
-          
-          // Main content
-          Expanded(
-            child: Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              child: widget.child,
+            
+            // Main content area
+            Expanded(
+              child: Column(
+                children: [
+                  // App bar area
+                  _buildDesktopHeader(),
+                  
+                  // Main content
+                  Expanded(
+                    child: Container(
+                      color: backgroundColor,
+                      width: double.infinity,
+                      child: widget.child,
+                    ),
+                  ),
+                ],
+              ),
             ),
+          ],
+        ),
+      );
+    }
+  }
+  
+  Widget _buildDesktopHeader() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final headerHeight = 70.0;
+    final headerColor = isDarkMode 
+        ? AppLayoutColors.darkHeaderBg
+        : AppLayoutColors.lightHeaderBg;
+    final textColor = isDarkMode
+        ? AppLayoutColors.darkText
+        : AppLayoutColors.lightText;
+    
+    return Container(
+      height: headerHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      decoration: BoxDecoration(
+        color: headerColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Page title (left aligned)
+          Expanded(
+            child: Text(
+              widget.title,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+                color: textColor,
+              ),
+            ),
+          ),
+          
+          // Right side actions
+          Row(
+            children: [
+              const ThemeToggle(showLabel: false),
+              const SizedBox(width: 16),
+              _buildUserProfile(),
+            ],
           ),
         ],
       ),
     );
   }
   
-  AppBar _buildDesktopAppBar() {
-    return AppBar(
-      centerTitle: false,
-      elevation: 0,
-      scrolledUnderElevation: 2.0,
-      actions: [
-        const ThemeToggle(showLabel: false),
-        const SizedBox(width: 8),
-        _buildUserProfile(),
-        const SizedBox(width: 16),
-      ],
-    );
-  }
-  
   AppBar _buildMobileAppBar() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDarkMode
+        ? AppLayoutColors.darkHeaderBg
+        : AppLayoutColors.lightHeaderBg;
+    final textColor = isDarkMode
+        ? AppLayoutColors.darkText
+        : AppLayoutColors.lightText;
+        
     return AppBar(
       title: Text(
         widget.title,
-        style: const TextStyle(
+        style: TextStyle(
           fontWeight: FontWeight.w500,
+          color: textColor,
         ),
       ),
+      backgroundColor: bgColor,
       centerTitle: true,
       elevation: 0,
       scrolledUnderElevation: 2.0,
@@ -133,158 +237,155 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
         ? 280.0
         : (_isSidebarCollapsed ? 80.0 : 280.0);
     
-    // Colors
-    final backgroundColor = isDarkMode 
-        ? const Color(0xFF1E1E2D) 
-        : Colors.white;
-    final borderColor = isDarkMode 
-        ? Colors.grey[800]! 
-        : Colors.grey[200]!;
+    // Sidebar color - always dark for the demo
+    final sidebarColor = AppLayoutColors.darkSidebarBg;
     
+    // Text colors - adjusted for dark sidebar
+    final textColor = Colors.grey[300]!;
+    final textColorSecondary = Colors.grey[500]!;
+    
+    final sidebarContent = Column(
+      children: [
+        // Logo and app name
+        _buildSidebarHeader(isSmallScreen),
+        
+        const SizedBox(height: 24),
+        
+        // Navigation section label
+        if (!_isSidebarCollapsed && !isSmallScreen)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'MAIN MENU',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: textColorSecondary,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ),
+          ),
+        
+        // Navigation links
+        Expanded(
+          child: ListView(
+            padding: EdgeInsets.symmetric(
+              horizontal: isSmallScreen ? 12 : _isSidebarCollapsed ? 12 : 16,
+              vertical: 8,
+            ),
+            children: [
+              _buildNavItem(
+                icon: Icons.dashboard_rounded,
+                title: 'Dashboard',
+                route: AppRoutes.dashboard,
+                isSmallScreen: isSmallScreen,
+                isSidebarCollapsed: _isSidebarCollapsed,
+              ),
+              _buildNavItem(
+                icon: Icons.reviews_rounded,
+                title: 'Review Requests',
+                route: AppRoutes.reviewRequests,
+                isSmallScreen: isSmallScreen,
+                isSidebarCollapsed: _isSidebarCollapsed,
+              ),
+              _buildNavItem(
+                icon: Icons.qr_code_rounded,
+                title: 'QR Code',
+                route: AppRoutes.qrCode,
+                isSmallScreen: isSmallScreen,
+                isSidebarCollapsed: _isSidebarCollapsed,
+              ),
+              _buildNavItem(
+                icon: Icons.feedback_rounded,
+                title: 'Feedback',
+                route: AppRoutes.feedback,
+                isSmallScreen: isSmallScreen,
+                isSidebarCollapsed: _isSidebarCollapsed,
+              ),
+              
+              // Divider for settings section
+              if (!_isSidebarCollapsed || isSmallScreen)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Divider(
+                          color: Colors.grey[800],
+                          thickness: 1,
+                        ),
+                      ),
+                      if (!_isSidebarCollapsed && !isSmallScreen)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Text(
+                            'SYSTEM',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: textColorSecondary,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+                      if (!_isSidebarCollapsed || isSmallScreen)
+                        Expanded(
+                          child: Divider(
+                            color: Colors.grey[800],
+                            thickness: 1,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              
+              _buildNavItem(
+                icon: Icons.settings_rounded,
+                title: 'Settings',
+                route: AppRoutes.settings,
+                isSmallScreen: isSmallScreen,
+                isSidebarCollapsed: _isSidebarCollapsed,
+              ),
+              _buildNavItem(
+                icon: Icons.card_membership_rounded,
+                title: 'Subscription',
+                route: AppRoutes.subscription,
+                isSmallScreen: isSmallScreen,
+                isSidebarCollapsed: _isSidebarCollapsed,
+              ),
+            ],
+          ),
+        ),
+        
+        // Sidebar footer with collapse button on desktop
+        if (!isSmallScreen)
+          _buildSidebarFooter(),
+        
+        // Sign out option on mobile
+        if (isSmallScreen)
+          _buildSignOutOption(),
+      ],
+    );
+
+    // For mobile, use a drawer
+    if (isSmallScreen) {
+      return Drawer(
+        backgroundColor: sidebarColor,
+        elevation: 2,
+        child: sidebarContent,
+      );
+    }
+
+    // For desktop, use a custom container
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeInOut,
       width: width,
-      child: Drawer(
-        backgroundColor: backgroundColor,
-        elevation: isSmallScreen ? 2 : 0,
-        shape: RoundedRectangleBorder(
-          side: BorderSide(
-            color: borderColor,
-            width: 0.5,
-          ),
-          borderRadius: isSmallScreen 
-              ? const BorderRadius.only(
-                  topRight: Radius.circular(16), 
-                  bottomRight: Radius.circular(16)
-                ) 
-              : BorderRadius.zero,
-        ),
-        child: Column(
-          children: [
-            _buildSidebarHeader(isSmallScreen),
-            
-            const SizedBox(height: 12),
-            
-            // Navigation section label
-            if (!_isSidebarCollapsed && !isSmallScreen)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'MAIN MENU',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                ),
-              ),
-            
-            // Navigation links
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isSmallScreen ? 12 : _isSidebarCollapsed ? 12 : 16,
-                  vertical: 8,
-                ),
-                children: [
-                  _buildNavItem(
-                    icon: Icons.dashboard_rounded,
-                    title: 'Dashboard',
-                    route: AppRoutes.dashboard,
-                    isSmallScreen: isSmallScreen,
-                    isSidebarCollapsed: _isSidebarCollapsed,
-                  ),
-                  _buildNavItem(
-                    icon: Icons.reviews_rounded,
-                    title: 'Review Requests',
-                    route: AppRoutes.reviewRequests,
-                    isSmallScreen: isSmallScreen,
-                    isSidebarCollapsed: _isSidebarCollapsed,
-                  ),
-                  _buildNavItem(
-                    icon: Icons.qr_code_rounded,
-                    title: 'QR Code',
-                    route: AppRoutes.qrCode,
-                    isSmallScreen: isSmallScreen,
-                    isSidebarCollapsed: _isSidebarCollapsed,
-                  ),
-                  _buildNavItem(
-                    icon: Icons.feedback_rounded,
-                    title: 'Feedback',
-                    route: AppRoutes.feedback,
-                    isSmallScreen: isSmallScreen,
-                    isSidebarCollapsed: _isSidebarCollapsed,
-                  ),
-                  
-                  // Divider for settings section
-                  if (!_isSidebarCollapsed || isSmallScreen)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Divider(
-                              color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                              thickness: 1,
-                            ),
-                          ),
-                          if (!_isSidebarCollapsed && !isSmallScreen)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              child: Text(
-                                'SYSTEM',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-                            ),
-                          if (!_isSidebarCollapsed || isSmallScreen)
-                            Expanded(
-                              child: Divider(
-                                color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                                thickness: 1,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  
-                  _buildNavItem(
-                    icon: Icons.settings_rounded,
-                    title: 'Settings',
-                    route: AppRoutes.settings,
-                    isSmallScreen: isSmallScreen,
-                    isSidebarCollapsed: _isSidebarCollapsed,
-                  ),
-                  _buildNavItem(
-                    icon: Icons.card_membership_rounded,
-                    title: 'Subscription',
-                    route: AppRoutes.subscription,
-                    isSmallScreen: isSmallScreen,
-                    isSidebarCollapsed: _isSidebarCollapsed,
-                  ),
-                ],
-              ),
-            ),
-            
-            // Sidebar footer with collapse button on desktop
-            if (!isSmallScreen)
-              _buildSidebarFooter(isDarkMode),
-            
-            // Sign out option on mobile
-            if (isSmallScreen)
-              _buildSignOutOption(isDarkMode),
-          ],
-        ),
-      ),
+      color: sidebarColor,
+      child: sidebarContent,
     );
   }
   
@@ -300,7 +401,7 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
-              color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+              color: Colors.grey[800]!,
               width: 0.5,
             ),
           ),
@@ -315,7 +416,7 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Center(
@@ -333,7 +434,7 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Center(
@@ -345,14 +446,12 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
                     ),
                   ),
                   const SizedBox(width: 16),
-                  Text(
+                  const Text(
                     'RevBoostApp',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: isDarkMode
-                          ? Colors.white
-                          : AppColors.primaryDark,
+                      color: Colors.white,
                     ),
                   ),
                 ],
@@ -370,26 +469,21 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
     required bool isSmallScreen,
     required bool isSidebarCollapsed,
   }) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final isSelected = GoRouterState.of(context).matchedLocation == route;
     
-    // Colors
+    // Enhanced colors for better contrast and visual hierarchy
     final selectedBgColor = isSelected
-        ? AppColors.primary.withOpacity(0.15)
+        ? AppColors.primary.withOpacity(0.2)
         : Colors.transparent;
     final selectedBorderColor = isSelected
         ? AppColors.primary
         : Colors.transparent;
     final textColor = isSelected
         ? AppColors.primary
-        : isDarkMode
-            ? Colors.grey[300]
-            : Colors.grey[700];
+        : Colors.grey[300];
     final iconColor = isSelected
         ? AppColors.primary
-        : isDarkMode
-            ? Colors.grey[400]
-            : Colors.grey[600];
+        : Colors.grey[400];
     
     return Container(
       margin: EdgeInsets.symmetric(
@@ -418,8 +512,8 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
               Navigator.pop(context);
             }
           },
-          splashColor: AppColors.primary.withOpacity(0.05),
-          highlightColor: AppColors.primary.withOpacity(0.1),
+          splashColor: AppColors.primary.withOpacity(0.1),
+          highlightColor: AppColors.primary.withOpacity(0.15),
           child: Padding(
             padding: EdgeInsets.symmetric(
               horizontal: 14,
@@ -465,12 +559,12 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
     );
   }
   
-  Widget _buildSidebarFooter(bool isDarkMode) {
+  Widget _buildSidebarFooter() {
     return Container(
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(
-            color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+            color: Colors.grey[800]!,
             width: 0.5,
           ),
         ),
@@ -487,21 +581,21 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
                   : MainAxisAlignment.spaceBetween,
               children: [
                 if (!_isSidebarCollapsed)
-                  Text(
+                  const Text(
                     'Collapse Sidebar',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+                      color: Colors.white70,
                     ),
                   ),
                 RotationTransition(
                   turns: Tween(begin: 0.0, end: 0.5)
                       .animate(_animationController),
-                  child: Icon(
+                  child: const Icon(
                     Icons.keyboard_arrow_left_rounded,
                     size: 22,
-                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                    color: Colors.white70,
                   ),
                 ),
               ],
@@ -512,12 +606,12 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
     );
   }
   
-  Widget _buildSignOutOption(bool isDarkMode) {
+  Widget _buildSignOutOption() {
     return Container(
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(
-            color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+            color: Colors.grey[800]!,
             width: 0.5,
           ),
         ),
@@ -529,22 +623,22 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
             Provider.of<AuthProvider>(context, listen: false).signOut();
             context.go(AppRoutes.splash);
           },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             child: Row(
               children: [
                 Icon(
                   Icons.logout_rounded,
                   size: 22,
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                  color: Colors.white70,
                 ),
-                const SizedBox(width: 14),
+                SizedBox(width: 14),
                 Text(
                   'Sign Out',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
-                    color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+                    color: Colors.white70,
                   ),
                 ),
               ],
@@ -560,22 +654,33 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
     final user = Provider.of<AuthProvider>(context).user;
     final displayName = user?.displayName ?? 'User';
     
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+    final bgColor = isDarkMode
+        ? const Color(0xFF2D2D42).withOpacity(0.5)
+        : Colors.white.withOpacity(0.8);
+    final borderColor = isDarkMode
+        ? Colors.grey[800]!
+        : Colors.grey[200]!;
+    final textColor = isDarkMode
+        ? Colors.white
+        : Colors.grey[800]!;
+    
+    // Enhanced profile button with better styling
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(40),
+        border: Border.all(
+          color: borderColor,
+          width: 1,
+        ),
+        color: bgColor,
+      ),
       child: PopupMenuButton<String>(
         offset: const Offset(0, 40),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(40),
-            border: Border.all(
-              color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
-              width: 1,
-            ),
-          ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             children: [
               CircleAvatar(
@@ -596,7 +701,7 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
                 displayName,
                 style: TextStyle(
                   fontWeight: FontWeight.w500,
-                  color: isDarkMode ? Colors.white : Colors.grey[800],
+                  color: textColor,
                 ),
               ),
               const SizedBox(width: 4),

@@ -587,7 +587,7 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
                             dataModuleShape: QrDataModuleShape.square,
                             color: Color(0xFF2563EB),
                           ),
-                          embeddedImage: const AssetImage('assets/images/logo_small.png'),
+                          embeddedImage: const AssetImage('assets/splash_logo_light.png'),
                           embeddedImageStyle: const QrEmbeddedImageStyle(
                             size: Size(40, 40),
                           ),

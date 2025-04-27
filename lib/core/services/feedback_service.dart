@@ -220,12 +220,12 @@ class FeedbackService {
 
   Future<List<FeedbackModel>> getFeedbackForBusinessOnce(String businessId) async {
   final snapshot = await _firestore
-      .collection('feedbacks')
+      .collection(_collectionName)  // Use 'feedback' (singular) instead of 'feedbacks'
       .where('businessId', isEqualTo: businessId)
       .get();
 
   return snapshot.docs.map((doc) {
-    return FeedbackModel.fromFirestore(doc.data() as DocumentSnapshot<Object?>);
+    return FeedbackModel.fromFirestore(doc);  // Pass the DocumentSnapshot directly
   }).toList();
 }
 }

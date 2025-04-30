@@ -16,6 +16,19 @@ enum ReviewRequestOperationStatus {
   error,
 }
 
+/// Result of a batch operation
+class BatchOperationResult {
+  final int success;
+  final int failure;
+  final List<String> errors;
+  
+  BatchOperationResult({
+    required this.success,
+    required this.failure,
+    this.errors = const [],
+  });
+}
+
 /// Provider for managing review requests
 class ReviewRequestProvider with ChangeNotifier {
   final ReviewRequestService _reviewRequestService;
@@ -108,7 +121,7 @@ class ReviewRequestProvider with ChangeNotifier {
     }
   }
   
-  // / Create and send a review request
+  /// Create and send a review request with improved error handling
   Future<bool> createAndSendReviewRequest({
     required String customerName,
     required String customerEmail,
@@ -118,135 +131,92 @@ class ReviewRequestProvider with ChangeNotifier {
     Map<String, dynamic>? metadata,
   }) async {
     try {
+      debugPrint('Starting to create and send review request to: $customerEmail');
+      
       _status = ReviewRequestOperationStatus.loading;
       _errorMessage = null;
       notifyListeners();
       
       // Create review link with special tracking parameter
-      
-      
       const baseUrl = "https://app.revboostapp.com";
-          
       final reviewLink = '$baseUrl/r/${business.id}';
       
+      debugPrint('Generated review link: $reviewLink');
+      
       // Create the review request
-      final requestId = await _reviewRequestService.createReviewRequest(
-        businessId: _businessId,
-        customerName: customerName,
-        customerEmail: customerEmail,
-        customerPhone: customerPhone,
-        reviewLink: reviewLink,
-        metadata: {
-          'source': 'manual',
-          'createdAt': DateTime.now().toIso8601String(),
-          ...metadata ?? {},
-        },
-      );
+      debugPrint('Creating review request in Firestore...');
+      String? requestId;
+      try {
+        requestId = await _reviewRequestService.createReviewRequest(
+          businessId: _businessId,
+          customerName: customerName,
+          customerEmail: customerEmail,
+          customerPhone: customerPhone,
+          reviewLink: reviewLink,
+          metadata: {
+            'source': 'manual',
+            'createdAt': DateTime.now().toIso8601String(),
+            ...metadata ?? {},
+          },
+        );
+        debugPrint('Review request created with ID: $requestId');
+      } catch (e) {
+        debugPrint('Error creating review request in Firestore: $e');
+        throw Exception('Failed to save review request: $e');
+      }
       
       // Send the email
-      final success = await _reviewRequestService.sendReviewRequestEmail(
-        requestId: requestId,
-        customerName: customerName,
-        customerEmail: customerEmail,
-        businessName: _businessName,
-        reviewLink: reviewLink,
-        replyToEmail: replyToEmail,
-      );
+      debugPrint('Sending email to $customerEmail...');
+      bool emailSent = false;
+      try {
+        emailSent = await _reviewRequestService.sendReviewRequestEmail(
+          requestId: requestId,
+          customerName: customerName,
+          customerEmail: customerEmail,
+          businessName: _businessName,
+          reviewLink: reviewLink,
+          replyToEmail: replyToEmail,
+        );
+        debugPrint('Email sent successfully: $emailSent');
+      } catch (e) {
+        debugPrint('Error sending email: $e');
+        throw e; // Re-throw to be caught by outer try-catch
+      }
+      
+      if (!emailSent) {
+        debugPrint('Email service reported failure');
+        throw Exception('Failed to send email: The email service reported a failure.');
+      }
       
       // Refresh statistics
-      await refreshStatistics();
+      try {
+        await refreshStatistics();
+      } catch (e) {
+        debugPrint('Error refreshing statistics: $e');
+        // This shouldn't fail the whole operation
+      }
       
+      debugPrint('Review request process completed successfully');
       _status = ReviewRequestOperationStatus.success;
       notifyListeners();
       
-      return success;
+      return true;
     } catch (e) {
+      final errorMsg = e.toString();
+      debugPrint('Error in createAndSendReviewRequest: $errorMsg');
       _status = ReviewRequestOperationStatus.error;
-      _errorMessage = e.toString();
+      
+      // Clean up the error message a bit
+      if (errorMsg.contains('Exception: ')) {
+        _errorMessage = errorMsg.replaceFirst('Exception: ', '');
+      } else {
+        _errorMessage = errorMsg;
+      }
+      
       notifyListeners();
       return false;
     }
   }
-  // Improved createAndSendReviewRequest method with better error handling and logging
-// Future<bool> createAndSendReviewRequest({
-//   required String customerName,
-//   required String customerEmail,
-//   String? customerPhone,
-//   required BusinessModel business,
-//   String? replyToEmail,
-//   Map<String, dynamic>? metadata,
-// }) async {
-//   try {
-//     debugPrint('Starting to create and send review request to: $customerEmail');
-    
-//     _status = ReviewRequestOperationStatus.loading;
-//     _errorMessage = null;
-//     notifyListeners();
-    
-//     // Create review link with special tracking parameter
-//     const baseUrl = "https://app.revboostapp.com";
-//     final reviewLink = '$baseUrl/r/${business.id}';
-    
-//     debugPrint('Generated review link: $reviewLink');
-    
-//     // Test server connection before proceeding with the request
-//     final emailService = _reviewRequestService._emailService;
-//     final serverConnected = await emailService.testServerConnection();
-    
-//     if (!serverConnected) {
-//       throw Exception('Cannot connect to email server. The server might be down or hibernating. Please try again in a few moments.');
-//     }
-    
-//     // Create the review request
-//     debugPrint('Creating review request in database...');
-//     final requestId = await _reviewRequestService.createReviewRequest(
-//       businessId: _businessId,
-//       customerName: customerName,
-//       customerEmail: customerEmail,
-//       customerPhone: customerPhone,
-//       reviewLink: reviewLink,
-//       metadata: {
-//         'source': 'manual',
-//         'createdAt': DateTime.now().toIso8601String(),
-//         ...metadata ?? {},
-//       },
-//     );
-    
-//     debugPrint('Review request created with ID: $requestId');
-    
-//     // Send the email
-//     debugPrint('Sending email to $customerEmail...');
-//     final success = await _reviewRequestService.sendReviewRequestEmail(
-//       requestId: requestId,
-//       customerName: customerName,
-//       customerEmail: customerEmail,
-//       businessName: _businessName,
-//       reviewLink: reviewLink,
-//       replyToEmail: replyToEmail,
-//     );
-    
-//     if (success) {
-//       debugPrint('Email sent successfully to $customerEmail');
-//     } else {
-//       debugPrint('Failed to send email to $customerEmail');
-//       throw Exception('Email service failed to send the email. Please try again later.');
-//     }
-    
-//     // Refresh statistics
-//     await refreshStatistics();
-    
-//     _status = ReviewRequestOperationStatus.success;
-//     notifyListeners();
-    
-//     return success;
-//   } catch (e) {
-//     debugPrint('Error in createAndSendReviewRequest: $e');
-//     _status = ReviewRequestOperationStatus.error;
-//     _errorMessage = e.toString();
-//     notifyListeners();
-//     return false;
-//   }
-// }
   
   /// Delete a review request
   Future<bool> deleteReviewRequest(String requestId) async {
@@ -402,139 +372,146 @@ class ReviewRequestProvider with ChangeNotifier {
     return await _reviewRequestService.getReviewRequestById(id);
   }
   
-
   /// Delete multiple review requests in batch
-Future<bool> batchDeleteRequests(List<String> requestIds) async {
-  if (requestIds.isEmpty) return true;
-  
-  try {
-    _status = ReviewRequestOperationStatus.loading;
-    _errorMessage = null;
-    notifyListeners();
+  Future<bool> batchDeleteRequests(List<String> requestIds) async {
+    if (requestIds.isEmpty) return true;
     
-    int successCount = 0;
-    List<String> errors = [];
-    
-    // Process deletions sequentially to avoid overwhelming Firestore
-    for (final requestId in requestIds) {
-      try {
-        await _reviewRequestService.deleteReviewRequest(requestId);
-        successCount++;
-      } catch (e) {
-        errors.add('Failed to delete request $requestId: ${e.toString()}');
-      }
-    }
-    
-    // Refresh statistics
-    await refreshStatistics();
-    
-    _status = ReviewRequestOperationStatus.success;
-    _errorMessage = errors.isEmpty ? null : errors.join('\n');
-    notifyListeners();
-    
-    return successCount == requestIds.length;
-  } catch (e) {
-    _status = ReviewRequestOperationStatus.error;
-    _errorMessage = 'Failed to batch delete review requests: ${e.toString()}';
-    notifyListeners();
-    return false;
-  }
-}
-
-/// Resend multiple review requests in batch
-Future<BatchOperationResult> batchResendRequests(List<String> requestIds, BusinessModel business) async {
-  if (requestIds.isEmpty) {
-    return BatchOperationResult(success: 0, failure: 0);
-  }
-  
-  try {
-    _status = ReviewRequestOperationStatus.loading;
-    _errorMessage = null;
-    notifyListeners();
-    
-    int successCount = 0;
-    int failureCount = 0;
-    List<String> errors = [];
-    
-    // Process resends sequentially to avoid rate limiting
-    for (final requestId in requestIds) {
-      try {
-        // Get the request details
-        final request = await _reviewRequestService.getReviewRequestById(requestId);
-        
-        if (request != null) {
-          final success = await _reviewRequestService.resendReviewRequest(
-            requestId: requestId,
-            businessName: _businessName,
-          );
-          
-          if (success) {
-            successCount++;
-          } else {
-            failureCount++;
-            errors.add('Failed to resend request to ${request.customerEmail}');
-          }
-        } else {
-          failureCount++;
-          errors.add('Request $requestId not found');
+    try {
+      _status = ReviewRequestOperationStatus.loading;
+      _errorMessage = null;
+      notifyListeners();
+      
+      int successCount = 0;
+      List<String> errors = [];
+      
+      // Process deletions sequentially to avoid overwhelming Firestore
+      for (final requestId in requestIds) {
+        try {
+          await _reviewRequestService.deleteReviewRequest(requestId);
+          successCount++;
+        } catch (e) {
+          errors.add('Failed to delete request $requestId: ${e.toString()}');
         }
-      } catch (e) {
-        failureCount++;
-        errors.add('Error resending request $requestId: ${e.toString()}');
       }
       
-      // Add a small delay to avoid overwhelming the email service
-      await Future.delayed(const Duration(milliseconds: 300));
+      // Refresh statistics
+      await refreshStatistics();
+      
+      _status = ReviewRequestOperationStatus.success;
+      _errorMessage = errors.isEmpty ? null : errors.join('\n');
+      notifyListeners();
+      
+      return successCount == requestIds.length;
+    } catch (e) {
+      _status = ReviewRequestOperationStatus.error;
+      _errorMessage = 'Failed to batch delete review requests: ${e.toString()}';
+      notifyListeners();
+      return false;
+    }
+  }
+  
+  /// Resend multiple review requests in batch
+  Future<BatchOperationResult> batchResendRequests(List<String> requestIds, BusinessModel business) async {
+    if (requestIds.isEmpty) {
+      return BatchOperationResult(success: 0, failure: 0);
     }
     
-    // Refresh statistics
-    await refreshStatistics();
-    
-    _status = ReviewRequestOperationStatus.success;
-    _errorMessage = errors.isEmpty ? null : errors.join('\n');
-    notifyListeners();
-    
-    return BatchOperationResult(
-      success: successCount,
-      failure: failureCount,
-      errors: errors,
-    );
-  } catch (e) {
-    _status = ReviewRequestOperationStatus.error;
-    _errorMessage = 'Failed to batch resend review requests: ${e.toString()}';
-    notifyListeners();
-    
-    return BatchOperationResult(
-      success: 0,
-      failure: requestIds.length,
-      errors: [e.toString()],
-    );
+    try {
+      _status = ReviewRequestOperationStatus.loading;
+      _errorMessage = null;
+      notifyListeners();
+      
+      int successCount = 0;
+      int failureCount = 0;
+      List<String> errors = [];
+      
+      // Process resends sequentially to avoid rate limiting
+      for (final requestId in requestIds) {
+        try {
+          // Get the request details
+          final request = await _reviewRequestService.getReviewRequestById(requestId);
+          
+          if (request != null) {
+            final success = await _reviewRequestService.resendReviewRequest(
+              requestId: requestId,
+              businessName: _businessName,
+            );
+            
+            if (success) {
+              successCount++;
+            } else {
+              failureCount++;
+              errors.add('Failed to resend request to ${request.customerEmail}');
+            }
+          } else {
+            failureCount++;
+            errors.add('Request $requestId not found');
+          }
+        } catch (e) {
+          failureCount++;
+          errors.add('Error resending request $requestId: ${e.toString()}');
+        }
+        
+        // Add a small delay to avoid overwhelming the email service
+        await Future.delayed(const Duration(milliseconds: 300));
+      }
+      
+      // Refresh statistics
+      await refreshStatistics();
+      
+      _status = ReviewRequestOperationStatus.success;
+      _errorMessage = errors.isEmpty ? null : errors.join('\n');
+      notifyListeners();
+      
+      return BatchOperationResult(
+        success: successCount,
+        failure: failureCount,
+        errors: errors,
+      );
+    } catch (e) {
+      _status = ReviewRequestOperationStatus.error;
+      _errorMessage = 'Failed to batch resend review requests: ${e.toString()}';
+      notifyListeners();
+      
+      return BatchOperationResult(
+        success: 0,
+        failure: requestIds.length,
+        errors: [e.toString()],
+      );
+    }
   }
-}
-
-/// Resend a single review request using the request model
-Future<bool> resendRequest(ReviewRequestModel request, BusinessModel business) async {
-  try {
-    _status = ReviewRequestOperationStatus.loading;
-    _errorMessage = null;
-    notifyListeners();
-    
-    final success = await _reviewRequestService.resendReviewRequest(
-      requestId: request.id,
-      businessName: _businessName,
-    );
-    
-    _status = ReviewRequestOperationStatus.success;
-    notifyListeners();
-    
-    return success;
-  } catch (e) {
-    _status = ReviewRequestOperationStatus.error;
-    _errorMessage = 'Failed to resend review request: ${e.toString()}';
-    notifyListeners();
-    return false;
+  
+  /// Resend a single review request using the request model
+  Future<bool> resendRequest(ReviewRequestModel request, BusinessModel business) async {
+    try {
+      _status = ReviewRequestOperationStatus.loading;
+      _errorMessage = null;
+      notifyListeners();
+      
+      final success = await _reviewRequestService.resendReviewRequest(
+        requestId: request.id,
+        businessName: _businessName,
+      );
+      
+      _status = ReviewRequestOperationStatus.success;
+      notifyListeners();
+      
+      return success;
+    } catch (e) {
+      _status = ReviewRequestOperationStatus.error;
+      _errorMessage = 'Failed to resend review request: ${e.toString()}';
+      notifyListeners();
+      return false;
+    }
   }
-}
+  
+  /// Manually set error state (useful for UI timeout handling)
+  void setErrorState(String message) {
+    _status = ReviewRequestOperationStatus.error;
+    _errorMessage = message;
+    notifyListeners();
+  }
+  
   @override
   void dispose() {
     _reviewRequestsSubscription?.cancel();

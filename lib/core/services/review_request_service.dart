@@ -20,6 +20,9 @@ class ReviewRequestService {
   }) : _emailService = emailService,
        _firestore = firestore ?? FirebaseFirestore.instance;
   
+  /// Access to the email service (for provider access)
+  EmailService get emailService => _emailService;
+  
   /// Creates a new review request
   /// 
   /// Returns the ID of the created request
@@ -32,6 +35,8 @@ class ReviewRequestService {
     Map<String, dynamic>? metadata,
   }) async {
     try {
+      debugPrint('Creating new review request for $customerEmail');
+      
       // Create a tracking ID for the request
       final trackingId = _uuid.v4();
       
@@ -41,6 +46,9 @@ class ReviewRequestService {
         ...uri.queryParameters,
         'tracking_id': trackingId,
       }).toString();
+      
+      debugPrint('Generated tracking ID: $trackingId');
+      debugPrint('Review link with tracking: $updatedLink');
       
       // Create the request object
       final reviewRequest = {
@@ -58,6 +66,7 @@ class ReviewRequestService {
       // Add to Firestore
       final docRef = await _firestore.collection(_collectionName).add(reviewRequest);
       
+      debugPrint('Review request created with ID: ${docRef.id}');
       return docRef.id;
     } catch (e) {
       debugPrint('Error creating review request: $e');
@@ -77,6 +86,8 @@ class ReviewRequestService {
     String? replyToEmail,
   }) async {
     try {
+      debugPrint('Sending review request email for ID: $requestId');
+      
       // Send the email
       final success = await _emailService.sendReviewRequest(
         toEmail: customerEmail,
@@ -89,8 +100,11 @@ class ReviewRequestService {
         },
       );
       
+      debugPrint('Email sending result: $success');
+      
       if (success) {
         // Update the request status
+        debugPrint('Updating request status to "sent"');
         await _firestore.collection(_collectionName).doc(requestId).update({
           'status': 'sent',
           'sentAt': FieldValue.serverTimestamp(),
@@ -99,22 +113,25 @@ class ReviewRequestService {
         return true;
       } else {
         // Mark as failed
+        debugPrint('Email failed to send, updating request status to "failed"');
         await _firestore.collection(_collectionName).doc(requestId).update({
           'status': 'failed',
+          'metadata.error': 'Email service reported failure',
         });
         
         return false;
       }
     } catch (e) {
-      debugPrint('Error sending review request email: $e');
+      debugPrint('Exception in sendReviewRequestEmail: $e');
       
       // Try to mark as failed
       try {
         await _firestore.collection(_collectionName).doc(requestId).update({
           'status': 'failed',
+          'metadata.error': e.toString(),
         });
-      } catch (_) {
-        // Ignore errors when updating status
+      } catch (updateError) {
+        debugPrint('Failed to update request status: $updateError');
       }
       
       return false;

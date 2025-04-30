@@ -2,10 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:revboostapp/core/theme/app_colors.dart';
-import 'package:revboostapp/providers/auth_provider.dart';
 import 'package:revboostapp/routing/app_router.dart';
 import 'package:revboostapp/widgets/common/app_button.dart';
 import 'package:revboostapp/widgets/common/loading_overlay.dart';

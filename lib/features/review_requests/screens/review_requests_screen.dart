@@ -91,26 +91,55 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
     }
   }
 
-  void _showNewRequestDialog() {
+//   void _showNewRequestDialog() {
+//   if (_business == null) return;
+  
+//   // Get the email service from the context
+//   final emailService = Provider.of<EmailService>(context, listen: false);
+  
+//   // Show dialog with its own provider
+//   showDialog(
+//     context: context,
+//     builder: (context) => ChangeNotifierProvider<ReviewRequestProvider>(
+//       create: (_) => ReviewRequestProvider(
+//         emailService: emailService,
+//         businessId: _business!.id,
+//         businessName: _business!.name,
+//       ),
+//       child: NewReviewRequestDialog(business: _business!),
+//     ),
+//   );
+// }
+  // Update this method in your ReviewRequestsScreen class
+void _showNewRequestDialog() {
   if (_business == null) return;
   
   // Get the email service from the context
   final emailService = Provider.of<EmailService>(context, listen: false);
   
+  // Create a fresh provider for the dialog to avoid state issues
+  final reviewRequestProvider = ReviewRequestProvider(
+    emailService: emailService,
+    businessId: _business!.id,
+    businessName: _business!.name,
+  );
+  
   // Show dialog with its own provider
   showDialog(
     context: context,
-    builder: (context) => ChangeNotifierProvider<ReviewRequestProvider>(
-      create: (_) => ReviewRequestProvider(
-        emailService: emailService,
-        businessId: _business!.id,
-        businessName: _business!.name,
-      ),
+    barrierDismissible: false, // Prevent dismissing by clicking outside
+    builder: (context) => ChangeNotifierProvider<ReviewRequestProvider>.value(
+      value: reviewRequestProvider,
       child: NewReviewRequestDialog(business: _business!),
     ),
-  );
+  ).then((_) {
+    // Refresh data after the dialog is closed
+    Provider.of<ReviewRequestProvider>(context, listen: false).refreshStatistics();
+    
+    // Dispose the provider when the dialog is closed to prevent memory leaks
+    reviewRequestProvider.dispose();
+  });
 }
-  
   void _showCsvImportDialog() {
   if (_business == null) return;
   

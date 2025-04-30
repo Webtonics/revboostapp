@@ -35,7 +35,10 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   bool _isVerified = false;
   String? _errorMessage;
   Timer? _timer;
+  Timer? _cooldownTimer;
   int _timeLeft = 60;  // Cooldown timer for resending verification
+  bool _navigationInProgress = false;
+  bool _initialVerificationDone = false;
 
   @override
   void initState() {
@@ -45,15 +48,38 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     if (widget.isHandlingActionUrl && widget.oobCode != null) {
       _processVerificationLink();
     } else {
-      // Normal flow - send verification email and start check timer
-      _sendVerificationEmail();
-      _startVerificationCheckTimer();
+      // Start with more frequent checks initially, then fall back to longer intervals
+      _immediateVerificationCheck();
     }
   }
 
+  void _immediateVerificationCheck() {
+    // Check immediately after mounting
+    _checkEmailVerification(initialCheck: true);
+    
+    // Check again after a short delay to catch quick verifications
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted && !_isVerified) {
+        _checkEmailVerification();
+      }
+    });
+    
+    // Check again after a slightly longer delay
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted && !_isVerified) {
+        _checkEmailVerification();
+        // Now start the regular timer for ongoing checks
+        _startVerificationCheckTimer();
+      }
+    });
+  }
+
   void _startVerificationCheckTimer() {
+    // Cancel any existing timer
+    _timer?.cancel();
+    
     // Start a timer to periodically check if the email has been verified
-    _timer = Timer.periodic(const Duration(seconds: 30), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
       _checkEmailVerification();
     });
   }
@@ -61,6 +87,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _cooldownTimer?.cancel();
     super.dispose();
   }
 
@@ -81,25 +108,33 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
         await authProvider.reloadUser();
         
-        setState(() {
-          _isVerified = true;
-          _isProcessingLink = false;
-        });
+        // Get the updated verification status
+        final user = authProvider.user;
+        final isEmailVerified = user?.emailVerified ?? false;
         
-        // Show success message
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Email verified successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
+        if (isEmailVerified) {
+          setState(() {
+            _isVerified = true;
+            _isProcessingLink = false;
+          });
           
-          // Redirect after short delay to allow the user to see the success message
-          Future.delayed(const Duration(seconds: 2), () {
-            if (mounted) {
-              context.go(AppRoutes.splash); // Router will direct to appropriate screen
-            }
+          // Show success message
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Email verified successfully!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+            
+            // Navigate after a brief delay
+            _navigateAfterVerification();
+          }
+        } else {
+          // This case handles when FirebaseAuth accepts the code but email isn't marked as verified
+          setState(() {
+            _errorMessage = 'Verification succeeded but email status was not updated. Please try refreshing.';
+            _isProcessingLink = false;
           });
         }
       }
@@ -120,9 +155,26 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     }
   }
 
+  void _navigateAfterVerification() {
+    if (!mounted || _navigationInProgress) return;
+    
+    _navigationInProgress = true;
+    
+    // Ensure we give the UI time to update before navigating
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (mounted) {
+        // Always use Splash as the target - the router will redirect appropriately
+        context.go(AppRoutes.splash);
+      }
+    });
+  }
+
   Future<void> _sendVerificationEmail() async {
+    if (_isResendingEmail) return;
+    
     setState(() {
       _isResendingEmail = true;
+      _errorMessage = null;
     });
 
     try {
@@ -134,7 +186,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         _timeLeft = 60;
       });
       
-      Timer.periodic(const Duration(seconds: 1), (timer) {
+      _cooldownTimer?.cancel();
+      _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
         if (_timeLeft > 0) {
           setState(() {
             _timeLeft--;
@@ -151,12 +204,16 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to send verification email: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      // setState(() {
+      //   _errorMessage = 'Failed to send verification email: ${e.toString()}';
+      // });
+      
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(
+      //     content: Text(_errorMessage!),
+      //     backgroundColor: Colors.red,
+      //   ),
+      // );
     } finally {
       setState(() {
         _isResendingEmail = false;
@@ -164,34 +221,50 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     }
   }
 
-  Future<void> _checkEmailVerification() async {
-    if (_isCheckingVerification) return;
+  Future<void> _checkEmailVerification({bool initialCheck = false}) async {
+    if (_isCheckingVerification || _isVerified || _navigationInProgress) return;
     
     setState(() {
       _isCheckingVerification = true;
     });
     
     try {
+      // Force reload user in the auth provider
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       await authProvider.reloadUser();
       
-      if (authProvider.user?.emailVerified ?? false) {
+      // Get the updated verification status
+      final user = authProvider.user;
+      final isEmailVerified = user?.emailVerified ?? false;
+      
+      if (isEmailVerified) {
         _timer?.cancel();
+        
         setState(() {
           _isVerified = true;
+          _isCheckingVerification = false;
         });
-        // Email is verified, redirect to the next appropriate screen
-        // The redirect logic in the router will handle where to go next
-        if (mounted) {
-          context.go(AppRoutes.splash);
+        
+        // Update this flag to avoid double sending
+        if (initialCheck) {
+          _initialVerificationDone = true;
         }
+        
+        _navigateAfterVerification();
+      } else if (initialCheck && !_initialVerificationDone) {
+        // First time check and not verified - send verification email
+        _initialVerificationDone = true;
+        await _sendVerificationEmail();
       }
     } catch (e) {
       // Silent error - we'll just try again next time
+      debugPrint('Error checking email verification: $e');
     } finally {
-      setState(() {
-        _isCheckingVerification = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isCheckingVerification = false;
+        });
+      }
     }
   }
 
@@ -201,7 +274,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     final email = authProvider.user?.email ?? 'your email';
     final isEmailVerified = authProvider.user?.emailVerified ?? false;
     
-    // If email is verified (either from initial check or after processing link)
+    // If email is verified from provider or internal state
     if (_isVerified || isEmailVerified) {
       return Scaffold(
         body: Center(
@@ -227,13 +300,22 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 ),
                 const SizedBox(height: 32),
                 ElevatedButton(
-                  onPressed: () {
-                    context.go(AppRoutes.splash); // Router will redirect appropriately
-                  },
+                  onPressed: _navigationInProgress 
+                    ? null
+                    : () {
+                        _navigationInProgress = true;
+                        context.go(AppRoutes.splash); 
+                      },
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size(double.infinity, 50),
                   ),
-                  child: const Text('Continue'),
+                  child: _navigationInProgress
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Continue'),
                 ),
               ],
             ),
@@ -245,6 +327,11 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     // If we're currently processing a verification link
     if (_isProcessingLink) {
       return Scaffold(
+        appBar: AppBar(
+          title: const Text('Email Verification'),
+          // Prevent back navigation during verification
+          automaticallyImplyLeading: false,
+        ),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -254,7 +341,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
               const Text('Verifying your email...'),
               if (_errorMessage != null)
                 Padding(
-                  padding: const EdgeInsets.only(top: 16.0),
+                  padding: const EdgeInsets.all(24.0),
                   child: Text(
                     _errorMessage!,
                     style: TextStyle(color: Theme.of(context).colorScheme.error),
@@ -271,6 +358,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Verify Your Email'),
+        // Prevent back navigation for verification page
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -305,6 +394,14 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 style: Theme.of(context).textTheme.bodyLarge,
                 textAlign: TextAlign.center,
               ),
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _errorMessage!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  textAlign: TextAlign.center,
+                ),
+              ],
               const SizedBox(height: 24),
               const Text(
                 'Please check your inbox and click the verification link to continue.',
@@ -314,12 +411,16 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
               ElevatedButton(
                 onPressed: _isCheckingVerification
                     ? null
-                    : _checkEmailVerification,
+                    : () => _checkEmailVerification(),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 50),
                 ),
                 child: _isCheckingVerification
-                    ? const CircularProgressIndicator()
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2)
+                      )
                     : const Text('I\'ve Verified My Email'),
               ),
               const SizedBox(height: 16),
@@ -328,7 +429,11 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                     ? null
                     : _sendVerificationEmail,
                 child: _isResendingEmail
-                    ? const CircularProgressIndicator(strokeWidth: 2)
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2)
+                      )
                     : _timeLeft > 0
                         ? Text('Resend Email (${_timeLeft}s)')
                         : const Text('Resend Verification Email'),

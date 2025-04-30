@@ -7,11 +7,11 @@ import 'package:revboostapp/features/auth/screens/email_verification_screen.dart
 import 'package:revboostapp/features/auth/screens/forgot_password_screen.dart';
 import 'package:revboostapp/features/auth/screens/login_screen.dart';
 import 'package:revboostapp/features/auth/screens/register_screen.dart';
+import 'package:revboostapp/features/auth/screens/reset_password_screen.dart';
 import 'package:revboostapp/features/business_setup/screens/business_setup_screen.dart';
 import 'package:revboostapp/features/dashboard/screens/dashboard_screen.dart';
 import 'package:revboostapp/features/feedback/screens/feedback_screen.dart';
 import 'package:revboostapp/features/onboarding/screens/onboarding_screen.dart';
-import 'package:revboostapp/features/onboarding/services/onboarding_service.dart';
 import 'package:revboostapp/features/qr_code/screens/qr_code_screen.dart';
 import 'package:revboostapp/features/review_requests/screens/review_requests_screen.dart';
 import 'package:revboostapp/features/reviews/screens/public_review_screen.dart';
@@ -32,6 +32,7 @@ class AppRoutes {
   static const String forgotPassword = '/forgot-password';
   static const String authAction = '/auth/action';
   static const String reviewPage = '/r/:businessId';
+  static const String resetPassword = '/reset-password';
 
   // Auth-required routes
   static const String emailVerification = '/email-verification';
@@ -57,6 +58,8 @@ class AppRoutes {
     register,
     forgotPassword,
     authAction,
+    resetPassword,
+    reviewPage,
   ];
 
   // Routes that are accessible without email verification
@@ -116,6 +119,10 @@ class PlaceholderScreen extends StatelessWidget {
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
   
+  // Flag to prevent redirect loops with a more robust implementation
+  static bool _isRedirecting = false;
+  static DateTime _lastRedirectTime = DateTime.now().subtract(const Duration(seconds: 1));
+  
   /// Get the configured GoRouter instance
   static GoRouter get router {
     return GoRouter(
@@ -125,65 +132,117 @@ class AppRouter {
       
       /// Primary redirect logic to handle authentication and route protection
       redirect: (context, state) async {
-        // Extract important data
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
-        final currentPath = state.matchedLocation;
-
-        // Logging to help with debugging
-        _logRouteAttempt(currentPath, state.uri);
-        
-        // Skip redirect for these special cases
-        if (_shouldSkipRedirect(authProvider, currentPath)) {
+        // More robust redirect prevention mechanism
+        final now = DateTime.now();
+        if (_isRedirecting && now.difference(_lastRedirectTime).inMilliseconds < 500) {
+          debugPrint('❌ Skipping redirect - already in progress');
           return null;
         }
         
-        // AUTHENTICATION CHECK
-        final isAuthenticated = authProvider.status == AuthStatus.authenticated;
-        final user = authProvider.user;
-        final isPublicRoute = AppRoutes.publicRoutes.contains(currentPath);
+        _isRedirecting = true;
+        _lastRedirectTime = now;
+        String? redirectPath;
         
-        // Not logged in -> redirect to login unless on a public route
-        if (!isAuthenticated) {
-          return isPublicRoute ? null : AppRoutes.login;
-        }
-        
-        // User is authenticated but on a public route (login, register, etc.)
-        // Redirect to appropriate next step
-        if (isPublicRoute) {
-          return AppRoutes.emailVerification; // Always start at email verification
-        }
-        
-        // EMAIL VERIFICATION CHECK
-        final isEmailVerified = user?.emailVerified ?? false;
-        if (!isEmailVerified && !AppRoutes.noVerificationRequiredRoutes.contains(currentPath)) {
-          return AppRoutes.emailVerification;
-        }
-        
-        // FLOW CHECK: Once email is verified, enforce onboarding -> business setup -> dashboard flow
-        if (isEmailVerified) {
-          final flowResult = await _enforceUserFlowProgression(user, currentPath, context);
-          if (flowResult != null) {
-            return flowResult;
-          }
-        }
-        
-        // SUBSCRIPTION CHECK for premium routes
-        if (AppRoutes.premiumRoutes.contains(currentPath)) {
-          // Force reload subscription status to avoid stale data
-          await subscriptionProvider.reloadSubscriptionStatus();
+        try {
+          // Extract important data
+          final authProvider = Provider.of<AuthProvider>(context, listen: false);
+          final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+          final currentPath = state.uri.path;
+  
+          // Logging to help with debugging
+          _logRouteAttempt(currentPath, state.uri);
           
-          final hasActiveSubscription = subscriptionProvider.isSubscribed;
-          final isFreeTrial = subscriptionProvider.isFreeTrial;
-          
-          if (!hasActiveSubscription && !isFreeTrial && currentPath != AppRoutes.subscription) {
-            debugPrint('Premium route access attempted without subscription: $currentPath');
-            return AppRoutes.subscription;
+          // Skip redirect for these special cases
+          if (_shouldSkipRedirect(authProvider, currentPath)) {
+            return null;
           }
+          
+          // AUTHENTICATION CHECK
+          final isAuthenticated = authProvider.status == AuthStatus.authenticated;
+          final user = authProvider.user;
+          final isPublicRoute = AppRoutes.publicRoutes.contains(currentPath) || 
+                               AppRoutes.isPublicReviewRoute(currentPath);
+          
+          // Not logged in -> redirect to login unless on a public route
+          if (!isAuthenticated) {
+            return isPublicRoute ? null : AppRoutes.login;
+          }
+          
+          // User is authenticated but on a public route (login, register, etc.)
+          // Redirect to appropriate next step
+          if (isPublicRoute && currentPath != AppRoutes.splash) {
+            return AppRoutes.splash; // Redirect to splash which will handle further routing
+          }
+          
+          // EMAIL VERIFICATION CHECK
+          // Always reload user data to get the most up-to-date verification status
+          await authProvider.reloadUser();
+          final isEmailVerified = user?.emailVerified ?? false;
+          
+          // If on verification screen but already verified, move forward
+          if (currentPath == AppRoutes.emailVerification && isEmailVerified) {
+            redirectPath = await _determineNextPathInFlow(user!, context);
+            debugPrint('⚡ Email already verified, moving to next flow step: $redirectPath');
+            return redirectPath;
+          }
+          
+          // Enforce verification for protected routes
+          if (!isEmailVerified && !AppRoutes.noVerificationRequiredRoutes.contains(currentPath)) {
+            debugPrint('⚡ Redirecting to email verification: email not verified');
+            return AppRoutes.emailVerification;
+          }
+          
+          // If on splash and authenticated, determine next appropriate screen
+          if (currentPath == AppRoutes.splash) {
+            redirectPath = await _determineNextPathInFlow(user!, context);
+            debugPrint('⚡ Splash redirect decision: $redirectPath');
+            return redirectPath;
+          }
+          
+          // BUSINESS SETUP & ONBOARDING FLOW
+          // The user has completed business setup
+          final businessSetupCompleted = user?.hasCompletedSetup ?? false;
+          
+          // If business setup is not completed
+          if (!businessSetupCompleted) {
+            // Only redirect to onboarding if not already on onboarding or business setup
+            if (currentPath != AppRoutes.onboarding && currentPath != AppRoutes.businessSetup) {
+              debugPrint('⚡ Redirecting to onboarding: business setup not completed');
+              return AppRoutes.onboarding;
+            }
+          } else {
+            // If business setup is completed but user is on onboarding or business setup screens
+            if (currentPath == AppRoutes.onboarding || currentPath == AppRoutes.businessSetup) {
+              debugPrint('⚡ Business setup completed, redirecting to dashboard');
+              return AppRoutes.dashboard;
+            }
+          }
+          
+          // SUBSCRIPTION CHECK for premium routes
+          if (AppRoutes.premiumRoutes.contains(currentPath)) {
+            // Force reload subscription status to avoid stale data
+            await subscriptionProvider.reloadSubscriptionStatus();
+            
+            final hasActiveSubscription = subscriptionProvider.isSubscribed;
+            final isFreeTrial = subscriptionProvider.isFreeTrial;
+            
+            if (!hasActiveSubscription && !isFreeTrial) {
+              debugPrint('Premium route access attempted without subscription: $currentPath');
+              return AppRoutes.subscription;
+            }
+          }
+          
+          // Allow access to the requested route if all checks pass
+          return null;
+        } catch (e) {
+          debugPrint('❌ Error in redirect logic: $e');
+          return null; // In case of error, don't redirect to avoid loops
+        } finally {
+          // Reset the redirect flag with a slight delay to prevent immediate re-triggers
+          Future.delayed(const Duration(milliseconds: 300), () {
+            _isRedirecting = false;
+          });
         }
-        
-        // Allow access to the requested route if all checks pass
-        return null;
       },
       
       // Define all application routes
@@ -209,7 +268,86 @@ class AppRouter {
         // AUTHENTICATION FLOW ROUTES
         GoRoute(
           path: AppRoutes.emailVerification,
-          builder: (context, state) => const EmailVerificationScreen(),
+          builder: (context, state) {
+            // Extract query parameters for direct verification links
+            final mode = state.uri.queryParameters['mode'];
+            final oobCode = state.uri.queryParameters['oobCode'];
+            final continueUrl = state.uri.queryParameters['continueUrl'];
+            
+            // If this is a direct verification link, pass the parameters
+            if (mode == 'verifyEmail' && oobCode != null) {
+              return EmailVerificationScreen(
+                mode: mode,
+                oobCode: oobCode,
+                continueUrl: continueUrl,
+                isHandlingActionUrl: true,
+              );
+            }
+            
+            // Standard email verification screen
+            return const EmailVerificationScreen();
+          },
+        ),
+        GoRoute(
+          path: AppRoutes.authAction,
+          builder: (context, state) {
+            // Extract parameters
+            final mode = state.uri.queryParameters['mode'];
+            final oobCode = state.uri.queryParameters['oobCode'];
+            final continueUrl = state.uri.queryParameters['continueUrl'];
+            
+            // Log debug info
+            debugPrint('Auth action handling: mode=$mode, code=${oobCode != null ? 'present' : 'missing'}');
+            
+            // Handle each auth action mode
+            if (mode == 'verifyEmail' && oobCode != null) {
+              return EmailVerificationScreen(
+                mode: mode,
+                oobCode: oobCode,
+                continueUrl: continueUrl,
+                isHandlingActionUrl: true,
+              );
+            } else if (mode == 'resetPassword' && oobCode != null) {
+              return ResetPasswordScreen(
+                mode: mode,
+                oobCode: oobCode,
+                continueUrl: continueUrl,
+              );
+            }
+            
+            // Fall back to error screen for invalid parameters
+            return Scaffold(
+              appBar: AppBar(title: const Text('Authentication')),
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Invalid or expired action link'),
+                    if (kDebugMode) Text('Debug info: mode=$mode, oobCode=${oobCode?.substring(0, min(5, oobCode.length)) ?? "null"}'),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: () => context.go(AppRoutes.login),
+                      child: const Text('Return to Login'),
+                    )
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        GoRoute(
+          path: AppRoutes.resetPassword,
+          builder: (context, state) {
+            final mode = state.uri.queryParameters['mode'];
+            final oobCode = state.uri.queryParameters['oobCode'];
+            final continueUrl = state.uri.queryParameters['continueUrl'];
+            
+            return ResetPasswordScreen(
+              mode: mode,
+              oobCode: oobCode,
+              continueUrl: continueUrl,
+            );
+          },
         ),
         GoRoute(
           path: AppRoutes.onboarding,
@@ -270,12 +408,6 @@ class AppRouter {
             return PublicReviewScreen(businessId: businessId);
           },
         ),
-        
-        // AUTH ACTION ROUTES (Email verification, password reset)
-        GoRoute(
-          path: AppRoutes.authAction,
-          builder: (context, state) => _buildAuthActionScreen(context, state),
-        ),
       ],
       
       // Error handler for routes that don't match
@@ -302,117 +434,41 @@ class AppRouter {
     );
   }
 
+  /// Determine the next appropriate route in the user flow based on 
+  /// verification and setup status
+  static Future<String> _determineNextPathInFlow(dynamic user, BuildContext context) async {
+    // Check if business setup is completed
+    final businessSetupCompleted = user.hasCompletedSetup ?? false;
+    
+    // Email verification check
+    if (!(user.emailVerified ?? false)) {
+      return AppRoutes.emailVerification;
+    }
+    
+    // After email verification, check business setup status
+    if (!businessSetupCompleted) {
+      return AppRoutes.onboarding;
+    }
+    
+    // All steps completed, go to dashboard
+    return AppRoutes.dashboard;
+  }
+
   /// Check if we should skip the redirect logic for certain routes
   static bool _shouldSkipRedirect(AuthProvider authProvider, String currentPath) {
-    // Skip if auth is loading, on splash screen, or for public review pages
+    // Skip if auth is loading
     if (authProvider.status == AuthStatus.loading || 
-        authProvider.status == AuthStatus.initial ||
-        currentPath == AppRoutes.splash ||
-        AppRoutes.isPublicReviewRoute(currentPath)) {
+        authProvider.status == AuthStatus.initial) {
       return true;
     }
     
-    // Skip auth check for direct auth action links
-    if (currentPath == AppRoutes.authAction) {
-      debugPrint('Auth action URL detected - proceeding without redirect');
+    // Skip for public review pages
+    if (AppRoutes.isPublicReviewRoute(currentPath)) {
+      debugPrint('Public review route - skipping auth checks');
       return true;
     }
     
     return false;
-  }
-  
-  /// Enforce the proper progression through onboarding and business setup
-  static Future<String?> _enforceUserFlowProgression(
-      dynamic user, String currentPath, BuildContext context) async {
-    
-    // Get onboarding and business setup status
-    final onboardingCompleted = await OnboardingService.isOnboardingCompleted();
-    final businessSetupCompleted = user?.hasCompletedSetup ?? false;
-    
-    debugPrint('Flow status check: onboarding=${onboardingCompleted}, businessSetup=${businessSetupCompleted}');
-    
-    // Apply the strict flow progression logic
-    if (!onboardingCompleted) {
-      // If onboarding not completed, only allow access to onboarding screen
-      if (currentPath != AppRoutes.onboarding) {
-        debugPrint('Redirecting to onboarding: onboarding not completed');
-        return AppRoutes.onboarding;
-      }
-    } else if (!businessSetupCompleted) {
-      // If onboarding completed but business setup not completed,
-      // only allow access to business setup screen
-      if (currentPath != AppRoutes.businessSetup) {
-        debugPrint('Redirecting to business setup: onboarding completed but business setup not completed');
-        return AppRoutes.businessSetup;
-      }
-    }
-    
-    // If trying to access onboarding after completing it, redirect to next step
-    if (currentPath == AppRoutes.onboarding && onboardingCompleted) {
-      return businessSetupCompleted ? AppRoutes.dashboard : AppRoutes.businessSetup;
-    }
-    
-    // If trying to access business setup after completing it, redirect to dashboard
-    if (currentPath == AppRoutes.businessSetup && businessSetupCompleted) {
-      return AppRoutes.dashboard;
-    }
-    
-    // No redirection needed, allow current path
-    return null;
-  }
-  
-  /// Build the appropriate screen for auth action URLs (verification, password reset)
-  static Widget _buildAuthActionScreen(BuildContext context, GoRouterState state) {
-    // Extract parameters
-    final mode = state.uri.queryParameters['mode'];
-    final oobCode = state.uri.queryParameters['oobCode'];
-    final continueUrl = state.uri.queryParameters['continueUrl'];
-    
-    // Log debug info
-    debugPrint('Auth action handling: mode=$mode, code=${oobCode != null ? 'present' : 'missing'}');
-    
-    // Handle each auth action mode
-    switch (mode) {
-      case 'verifyEmail':
-        if (oobCode != null) {
-          return EmailVerificationScreen(
-            mode: mode,
-            oobCode: oobCode,
-            continueUrl: continueUrl,
-            isHandlingActionUrl: true,
-          );
-        }
-        break;
-        
-      // case 'resetPassword':
-      //   if (oobCode != null) {
-      //     return ForgotPasswordScreen(
-      //       mode: mode,
-      //       oobCode: oobCode,
-      //       continueUrl: continueUrl,
-      //     ); 
-      //   }
-      //   break;
-    }
-    
-    // Fall back to error screen for invalid parameters
-    return Scaffold(
-      appBar: AppBar(title: const Text('Authentication')),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('Invalid or expired action link'),
-            if (kDebugMode) Text('Debug info: mode=$mode, oobCode=${oobCode?.substring(0, min(5, oobCode.length)) ?? "null"}'),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => context.go(AppRoutes.login),
-              child: const Text('Return to Login'),
-            )
-          ],
-        ),
-      ),
-    );
   }
   
   /// Helper method to log route navigation attempts for debugging

@@ -5,12 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
+import 'package:revboostapp/core/theme/app_colors.dart';
 import 'package:revboostapp/features/onboarding/services/onboarding_service.dart';
 import 'package:revboostapp/providers/business_setup_provider.dart';
 import 'package:revboostapp/routing/app_router.dart';
 import 'package:revboostapp/widgets/common/app_button.dart';
 import 'package:revboostapp/widgets/common/loading_overlay.dart';
-
 
 class BusinessSetupScreen extends StatefulWidget {
   const BusinessSetupScreen({Key? key}) : super(key: key);
@@ -38,7 +38,6 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
     'Yelp': TextEditingController(),
     'Facebook': TextEditingController(),
     'TripAdvisor': TextEditingController(),
-    'Instagram': TextEditingController(),
   };
   
   // Step titles and subtitles for more context
@@ -58,18 +57,15 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
   ];
 
   // Platform icons
-  final Map<String, dynamic> _platformIcons = {
+  final Map<String, IconData> _platformIcons = {
     'Google Business Profile': Icons.business_center,
     'Yelp': Icons.restaurant_menu,
     'Facebook': Icons.facebook,
     'TripAdvisor': Icons.travel_explore,
-    'Instagram': Icons.camera_alt_outlined,
   };
   
   // Logo image data
   Uint8List? _logoImageBytes;
-  // String? _logoFileName;
-  // bool _isLogoUploading = false;
   String? _selectedCategory;
   bool _isLoading = false;
 
@@ -112,14 +108,6 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
           _reviewPlatformControllers[platform]!.text = reviewLinks[platform]!;
         }
       }
-      
-      // Set initial logo
-      // if (provider.logoData != null) {
-      //   setState(() {
-      //     _logoImageBytes = provider.logoData;
-      //     _logoFileName = 'Logo uploaded';
-      //   });
-      // }
     });
   }
 
@@ -141,7 +129,10 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
       // Validate and save business info
       if (_businessNameController.text.trim().isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Business name is required')),
+          const SnackBar(
+            content: Text('Business name is required'),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
         return;
       }
@@ -217,160 +208,79 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
     }
   }
 
-//   Future<void> _pickLogo() async {
-//   try {
-//     setState(() {
-//       _isLogoUploading = true;
-//     });
-    
-//     if (kIsWeb) {
-//       // Web implementation
-//       final html.FileUploadInputElement input = html.FileUploadInputElement();
-//       input.accept = 'image/*';
-//       input.click();
-      
-//       await input.onChange.first;
-      
-//       if (input.files!.isNotEmpty) {
-//         final file = input.files![0];
-//         final reader = html.FileReader();
-//         reader.readAsArrayBuffer(file);
-        
-//         await reader.onLoadEnd.first;
-        
-//         setState(() {
-//           _logoImageBytes = Uint8List.fromList(reader.result as List<int>);
-//           _logoFileName = file.name;
-//           _isLogoUploading = false;
-//         });
-        
-//         // Save to provider
-//         final provider = Provider.of<BusinessSetupProvider>(context, listen: false);
-//         provider.setLogo(_logoImageBytes!);
-//       } else {
-//         setState(() {
-//           _isLogoUploading = false;
-//         });
-//       }
-//     } else {
-//       // Mobile implementation
-//       final result = await FilePicker.platform.pickFiles(
-//         type: FileType.image,
-//         allowMultiple: false,
-//       );
-      
-//       if (result != null && result.files.isNotEmpty) {
-//         final file = result.files.first;
-        
-//         if (file.bytes != null) {
-//           // For web or when bytes are available
-//           setState(() {
-//             _logoImageBytes = file.bytes!;
-//             _logoFileName = file.name;
-//           });
-//         } else if (file.path != null) {
-//           // For mobile where we get a file path
-//           final fileBytes = await File(file.path!).readAsBytes();
-//           setState(() {
-//             _logoImageBytes = fileBytes;
-//             _logoFileName = file.name;
-//           });
-//         }
-        
-//         // Save to provider
-//         if (_logoImageBytes != null) {
-//           final provider = Provider.of<BusinessSetupProvider>(context, listen: false);
-//           provider.setLogo(_logoImageBytes!);
-//         }
-//       }
-      
-//       setState(() {
-//         _isLogoUploading = false;
-//       });
-//     }
-//   } catch (e) {
-//     setState(() {
-//       _isLogoUploading = false;
-//     });
-//     ScaffoldMessenger.of(context).showSnackBar(
-//       SnackBar(content: Text('Error selecting image: $e')),
-//     );
-//   }
-// }
-
-//   void _removeLogo() {
-//     setState(() {
-//       _logoImageBytes = null;
-//       _logoFileName = null;
-//     });
-    
-//     // Update provider
-//     final provider = Provider.of<BusinessSetupProvider>(context, listen: false);
-//     provider.clearLogo();
-//   }
-
   Future<void> _completeSetup() async {
-  setState(() {
-    _isLoading = true;
-  });
-  
-  try {
-    // Get provider
-    final provider = Provider.of<BusinessSetupProvider>(context, listen: false);
+    // Show loading indicator
+    setState(() {
+      _isLoading = true;
+    });
     
-    // Ensure business info is set
-    provider.setBusinessInfo(
-      name: _businessNameController.text.trim(),
-      description: _businessDescriptionController.text.trim(),
-    );
-    
-    // Save review platform links
-    for (final platform in _reviewPlatformControllers.keys) {
-      final link = _reviewPlatformControllers[platform]!.text.trim();
-      if (link.isNotEmpty) {
-        provider.setReviewLink(platform, link);
-      } else {
-        provider.removeReviewLink(platform);
+    try {
+      // Get provider
+      final provider = Provider.of<BusinessSetupProvider>(context, listen: false);
+      
+      // Ensure business info is set
+      provider.setBusinessInfo(
+        name: _businessNameController.text.trim(),
+        description: _businessDescriptionController.text.trim(),
+      );
+      
+      // Save review platform links
+      for (final platform in _reviewPlatformControllers.keys) {
+        final link = _reviewPlatformControllers[platform]!.text.trim();
+        if (link.isNotEmpty) {
+          provider.setReviewLink(platform, link);
+        } else {
+          provider.removeReviewLink(platform);
+        }
+      }
+      
+      // Save business setup to Firebase (without logo)
+      await provider.saveBusinessSetup();
+      
+      // Mark onboarding as completed
+      await OnboardingService.setBusinessSetupCompleted();
+      
+      // Hide loading indicator
+      setState(() {
+        _isLoading = false;
+      });
+      
+      // Navigation fix: First check if mounted, then navigate
+      if (mounted) {
+        // Navigate to dashboard through splash for proper redirection
+        context.go(AppRoutes.splash);
+      }
+    } catch (e) {
+      // Hide loading indicator
+      setState(() {
+        _isLoading = false;
+      });
+      
+      // Show error message if mounted
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
       }
     }
-    
-    // Save business setup to Firebase (without logo)
-    await provider.saveBusinessSetup();
-    
-    // Mark onboarding as completed
-    await OnboardingService.setBusinessSetupCompleted();
-    
-    setState(() {
-      _isLoading = false;
-    });
-    // if (!mounted) return;
-    context.go(AppRoutes.dashboard);
-    if (mounted) {
-      // Navigate directly to dashboard
-      context.go(AppRoutes.dashboard);
-    }
-  } catch (e) {
-    setState(() {
-      _isLoading = false;
-    });
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving business setup: $e')),
-      );
-    }
   }
-}
+
   @override
   Widget build(BuildContext context) {
-    // Detect screen size
+    // Detect screen size for responsive layout
     final size = MediaQuery.of(context).size;
     final isSmallScreen = size.width < 600;
     final isPortrait = size.height > size.width;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
     return LoadingOverlay(
       isLoading: _isLoading,
       child: Scaffold(
+        // Use a gradient app bar for a more modern look
         appBar: AppBar(
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -380,6 +290,7 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
                 'Setup Your Business',
                 style: TextStyle(
                   fontSize: isSmallScreen ? 18 : 20,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               Text(
@@ -392,6 +303,9 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
             ],
           ),
           elevation: 0,
+          backgroundColor: isDarkMode 
+              ? Theme.of(context).primaryColor.withOpacity(0.1)
+              : Theme.of(context).primaryColor.withOpacity(0.03),
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: 16.0),
@@ -408,136 +322,170 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
             ),
           ],
         ),
-        body: Padding(
-          padding: isSmallScreen ? const EdgeInsets.symmetric(horizontal: 18.0, vertical: 12) : const EdgeInsets.symmetric(horizontal: 100.0, vertical: 24),
-          child: Column(
-            children: [
-              // Progress indicator
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 8),
-                    
-                    // Linear progress indicator
-                    AnimatedBuilder(
-                      animation: _progressController,
-                      builder: (context, child) {
-                        return LinearProgressIndicator(
-                          value: _progressController.value,
-                          backgroundColor: Colors.grey[200],
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Theme.of(context).primaryColor,
-                          ),
-                          minHeight: 6,
-                          borderRadius: BorderRadius.circular(3),
-                        );
-                      }
-                    ),
-                    
-                    const SizedBox(height: 12),
-                    
-                    // Step title
-                    Text(
-                      _steps[_currentStep]['title']!,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: isSmallScreen ? 20 : 24,
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 4),
-                    
-                    // Step subtitle
-                    Text(
-                      _steps[_currentStep]['subtitle']!,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
-                        fontSize: isSmallScreen ? 14 : 16,
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 16),
-                  ],
-                ),
-              ),
-              
-              // Page content
-              Expanded(
-                child: PageView(
-                  controller: _pageController,
-                  physics: const NeverScrollableScrollPhysics(), // Disable swiping
-                  onPageChanged: (int page) {
-                    setState(() {
-                      _currentStep = page;
-                    });
-                  },
-                  children: [
-                    // Step 1: Business Information
-                    _buildBusinessInfoStep(isSmallScreen),
-                    
-                    // Step 2: Review Platform Links
-                    _buildReviewPlatformsStep(isSmallScreen),
-                    
-                    // Step 3: Final Step
-                    _buildFinalStep(isSmallScreen),
-                  ],
-                ),
-              ),
-              
-              // Navigation buttons
-              SafeArea(
-                minimum: EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: isSmallScreen ? 8.0 : 16.0
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Back button
-                    _currentStep > 0
-                        ? TextButton.icon(
-                            onPressed: _previousStep,
-                            icon: const Icon(Icons.arrow_back),
-                            label: Text(
-                              isSmallScreen && isPortrait ? '' : 'Back',
-                              style: TextStyle(
-                                fontSize: isSmallScreen ? 14 : 16,
+        body: Container(
+          // Add a subtle gradient background for polish
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: isDarkMode 
+                  ? [
+                      Theme.of(context).scaffoldBackgroundColor,
+                      Theme.of(context).scaffoldBackgroundColor.withOpacity(0.9),
+                    ]
+                  : [
+                      Colors.white,
+                      Colors.grey.shade50,
+                    ],
+            ),
+          ),
+          child: SafeArea(
+            child: Column(
+              children: [
+                // Progress indicator
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 20.0 : 32.0,
+                    vertical: 16.0,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Linear progress indicator
+                      AnimatedBuilder(
+                        animation: _progressController,
+                        builder: (context, child) {
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(3),
+                            child: LinearProgressIndicator(
+                              value: _progressController.value,
+                              backgroundColor: isDarkMode
+                                  ? Colors.grey.shade800
+                                  : Colors.grey.shade200,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Theme.of(context).primaryColor,
                               ),
+                              minHeight: 6,
                             ),
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: isSmallScreen ? 12 : 16,
-                                vertical: isSmallScreen ? 8 : 12,
-                              ),
-                            ),
-                          )
-                        : SizedBox(width: isSmallScreen ? 48 : 100),
-                    
-                    // Next/Finish button
-                    AppButton(
-                      text: _currentStep < _steps.length - 1 ? 'Next' : 'Finish',
-                      onPressed: _nextStep,
-                      icon: _currentStep < _steps.length - 1 
-                          ? Icons.arrow_forward 
-                          : Icons.check_circle_outline,
-                      type: AppButtonType.primary,
-                      size: isSmallScreen ? AppButtonSize.small : AppButtonSize.medium,
-                    ),
-                  ],
+                          );
+                        }
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Step title
+                      Text(
+                        _steps[_currentStep]['title']!,
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: isSmallScreen ? 20 : 24,
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 4),
+                      
+                      // Step subtitle
+                      Text(
+                        _steps[_currentStep]['subtitle']!,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                          fontSize: isSmallScreen ? 14 : 16,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                
+                // Divider for visual separation
+                Divider(
+                  height: 1,
+                  color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
+                ),
+                
+                // Page content
+                Expanded(
+                  child: PageView(
+                    controller: _pageController,
+                    physics: const NeverScrollableScrollPhysics(), // Disable swiping
+                    onPageChanged: (int page) {
+                      setState(() {
+                        _currentStep = page;
+                      });
+                    },
+                    children: [
+                      // Step 1: Business Information
+                      _buildBusinessInfoStep(isSmallScreen, isDarkMode),
+                      
+                      // Step 2: Review Platform Links
+                      _buildReviewPlatformsStep(isSmallScreen, isDarkMode),
+                      
+                      // Step 3: Final Step
+                      _buildFinalStep(isSmallScreen, isDarkMode),
+                    ],
+                  ),
+                ),
+                
+                // Bottom navigation bar with shadow
+                Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 5,
+                        offset: const Offset(0, -1),
+                      ),
+                    ],
+                  ),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: isSmallScreen ? 16.0 : 20.0,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Back button
+                      _currentStep > 0
+                          ? TextButton.icon(
+                              onPressed: _previousStep,
+                              icon: const Icon(Icons.arrow_back),
+                              label: Text(
+                                isSmallScreen && isPortrait ? '' : 'Back',
+                                style: TextStyle(
+                                  fontSize: isSmallScreen ? 14 : 16,
+                                ),
+                              ),
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: isSmallScreen ? 12 : 16,
+                                  vertical: isSmallScreen ? 8 : 12,
+                                ),
+                              ),
+                            )
+                          : SizedBox(width: isSmallScreen ? 48 : 100),
+                      
+                      // Next/Finish button
+                      AppButton(
+                        text: _currentStep < _steps.length - 1 ? 'Next' : 'Finish',
+                        onPressed: _nextStep,
+                        icon: _currentStep < _steps.length - 1 
+                            ? Icons.arrow_forward 
+                            : Icons.check_circle_outline,
+                        type: AppButtonType.primary,
+                        size: isSmallScreen ? AppButtonSize.small : AppButtonSize.medium,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildBusinessInfoStep(bool isSmallScreen) {
-    // final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+  Widget _buildBusinessInfoStep(bool isSmallScreen, bool isDarkMode) {
     return FadeTransition(
       opacity: _contentController,
       child: SlideTransition(
@@ -549,13 +497,15 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
           curve: Curves.easeOutCubic,
         )),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          padding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 20.0 : 32.0,
+            vertical: 24.0,
+          ),
           physics: const BouncingScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Business name field with animation
-              const SizedBox(height: 16),
               _buildAnimatedField(
                 controller: _businessNameController,
                 label: 'Business Name',
@@ -563,6 +513,7 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
                 icon: Icons.business,
                 delay: 100,
                 required: true,
+                isDarkMode: isDarkMode,
               ),
               
               const SizedBox(height: 24),
@@ -575,6 +526,7 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
                 icon: Icons.description,
                 maxLines: 4,
                 delay: 200,
+                isDarkMode: isDarkMode,
               ),
               
               const SizedBox(height: 32),
@@ -586,6 +538,7 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
                 icon: Icons.category,
                 items: const [
                   'Restaurant or Café',
+                  'Home Services',
                   'Retail Store',
                   'Service Business',
                   'Professional Services',
@@ -597,146 +550,68 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
                   setState(() {
                     _selectedCategory = value;
                   });
-                  
-                  // Save to provider if needed
-                  // final provider = Provider.of<BusinessSetupProvider>(context, listen: false);
-                  // provider.setCategory(value);
                 },
                 delay: 300,
+                isDarkMode: isDarkMode,
               ),
               
               const SizedBox(height: 32),
               
-              // Logo upload with animation
-              // _buildAnimatedWidget(
-              //   delay: 400,
-              //   child: Center(
-              //     child: Column(
-              //       children: [
-              //         InkWell(
-              //           onTap: _pickLogo,
-              //           child: Container(
-              //             width: 140,
-              //             height: 140,
-              //             decoration: BoxDecoration(
-              //               color: isDarkMode
-              //                   ? Colors.grey[800]
-              //                   : Colors.grey[100],
-              //               borderRadius: BorderRadius.circular(12),
-              //               border: Border.all(
-              //                   color: isDarkMode
-              //                       ? Colors.grey[700]!
-              //                       : Colors.grey[300]!),
-              //               boxShadow: [
-              //                 BoxShadow(
-              //                   color: Colors.black.withOpacity(0.05),
-              //                   blurRadius: 10,
-              //                   offset: const Offset(0, 4),
-              //                 ),
-              //               ],
-              //             ),
-              //             child: Stack(
-              //               alignment: Alignment.center,
-              //               children: [
-              //                 if (_logoImageBytes != null)
-              //                   ClipRRect(
-              //                     borderRadius: BorderRadius.circular(12),
-              //                     child: Image.memory(
-              //                       _logoImageBytes!,
-              //                       width: 140,
-              //                       height: 140,
-              //                       fit: BoxFit.cover,
-              //                     ),
-              //                   )
-              //                 else
-              //                   Icon(
-              //                     Icons.add_photo_alternate_outlined,
-              //                     size: 40,
-              //                     color: isDarkMode
-              //                         ? Colors.grey[400]
-              //                         : Colors.grey,
-              //                   ),
-              //                 if (_isLogoUploading)
-              //                   Container(
-              //                     width: 140,
-              //                     height: 140,
-              //                     decoration: BoxDecoration(
-              //                       color: Colors.black.withOpacity(0.3),
-              //                       borderRadius: BorderRadius.circular(12),
-              //                     ),
-              //                     child: const Center(
-              //                       child: CircularProgressIndicator(
-              //                         strokeWidth: 3,
-              //                         color: Colors.white,
-              //                       ),
-              //                     ),
-              //                   ),
-              //                 Positioned(
-              //                   bottom: 0,
-              //                   right: 0,
-              //                   child: Container(
-              //                     padding: const EdgeInsets.all(4),
-              //                     decoration: BoxDecoration(
-              //                       color: Theme.of(context).cardColor,
-              //                       shape: BoxShape.circle,
-              //                       boxShadow: const [
-              //                         BoxShadow(
-              //                           color: Colors.black12,
-              //                           blurRadius: 4,
-              //                           offset: Offset(0, 2),
-              //                         ),
-              //                       ],
-              //                     ),
-              //                     child: Icon(
-              //                       Icons.edit,
-              //                       size: 16,
-              //                       color: Theme.of(context).primaryColor,
-              //                     ),
-              //                   ),
-              //                 ),
-              //               ],
-              //             ),
-              //           ),
-              //         ),
-              //         const SizedBox(height: 12),
-              //         Row(
-              //           mainAxisAlignment: MainAxisAlignment.center,
-              //           children: [
-              //             TextButton.icon(
-              //               onPressed: _pickLogo,
-              //               icon: const Icon(Icons.upload),
-              //               label: Text(_logoFileName != null 
-              //                 ? 'Change Logo' 
-              //                 : 'Upload Logo'),
-              //               style: TextButton.styleFrom(
-              //                 foregroundColor: Theme.of(context).primaryColor,
-              //               ),
-              //             ),
-              //             if (_logoFileName != null) ...[
-              //               const SizedBox(width: 8),
-              //               TextButton.icon(
-              //                 onPressed: _removeLogo,
-              //                 icon: const Icon(Icons.delete_outline, color: Colors.red),
-              //                 label: const Text('Remove', style: TextStyle(color: Colors.red)),
-              //               ),
-              //             ],
-              //           ],
-              //         ),
-              //         if (_logoFileName != null)
-              //           Padding(
-              //             padding: const EdgeInsets.only(top: 8.0),
-              //             child: Text(
-              //               _logoFileName!,
-              //               style: TextStyle(
-              //                 fontSize: 12,
-              //                 color: Colors.grey[600],
-              //               ),
-              //             ),
-              //           ),
-              //       ],
-              //     ),
-              //   ),
-              // ),
+              // Tips section with animation
+              _buildAnimatedWidget(
+                delay: 400,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDarkMode 
+                        ? Colors.blue.shade900.withOpacity(0.2)
+                        : Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isDarkMode
+                          ? Colors.blue.shade800.withOpacity(0.3)
+                          : Colors.blue.shade100,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.lightbulb_outline,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Pro Tips',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).primaryColor,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        '• Use a descriptive business name that\'s easy to remember',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        '• Your description should highlight what makes your business unique',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        '• Select the most specific category for your business type',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               
               const SizedBox(height: 32),
             ],
@@ -746,7 +621,7 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
     );
   }
 
-  Widget _buildReviewPlatformsStep(bool isSmallScreen) {
+  Widget _buildReviewPlatformsStep(bool isSmallScreen, bool isDarkMode) {
     return FadeTransition(
       opacity: _contentController,
       child: SlideTransition(
@@ -758,16 +633,65 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
           curve: Curves.easeOutCubic,
         )),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          padding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 20.0 : 32.0,
+            vertical: 24.0,
+          ),
           physics: const BouncingScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 8),
-              const Text(
-                'Connect the platforms where your customers can leave reviews.',
-                style: TextStyle(color: Colors.grey),
+              // Info card at the top
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDarkMode
+                      ? Colors.grey.shade800.withOpacity(0.5)
+                      : Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDarkMode
+                        ? Colors.grey.shade700
+                        : Colors.grey.shade200,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: isDarkMode
+                              ? Colors.blue.shade300
+                              : Colors.blue.shade700,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Connect Your Review Platforms',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: isDarkMode
+                                ? Colors.blue.shade300
+                                : Colors.blue.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Add links to the platforms where your customers can leave reviews. These will be used to redirect customers when they leave positive feedback.',
+                      style: TextStyle(
+                        color: isDarkMode
+                            ? Colors.grey.shade300
+                            : Colors.grey.shade700,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              
               const SizedBox(height: 24),
               
               // Generate platform fields with animation
@@ -784,11 +708,73 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
                         controller: _reviewPlatformControllers[platform]!,
                         icon: icon,
                         delay: 100 * index,
+                        isDarkMode: isDarkMode,
                       ),
                       const SizedBox(height: 20),
                     ],
                   );
                 },
+              ),
+              
+              // Help text
+              _buildAnimatedWidget(
+                delay: 500,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDarkMode
+                        ? Colors.amber.shade900.withOpacity(0.2)
+                        : Colors.amber.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isDarkMode
+                          ? Colors.amber.shade800.withOpacity(0.3)
+                          : Colors.amber.shade100,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.help_outline,
+                            color: Colors.amber.shade800,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Need Help?',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.amber.shade800,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'To find your review profile links:',
+                        style: TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        '• Google: Search your business and copy the "Write a review" URL',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        '• Yelp/TripAdvisor: Go to your business profile and copy the URL',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        '• Facebook: Go to your page, click Reviews tab, and copy the URL',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                    ],
+                  ),
+                ),
               ),
               
               const SizedBox(height: 32),
@@ -799,7 +785,7 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
     );
   }
 
-  Widget _buildFinalStep(bool isSmallScreen) {
+  Widget _buildFinalStep(bool isSmallScreen, bool isDarkMode) {
     return FadeTransition(
       opacity: _contentController,
       child: SlideTransition(
@@ -851,7 +837,7 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
                   child: Text(
                     'Your business profile is ready. Click "Finish" to complete the setup and start collecting reviews right away.',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.grey[700],
+                      color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
                       fontSize: isSmallScreen ? 15 : 16,
                     ),
                     textAlign: TextAlign.center,
@@ -864,51 +850,81 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
                 _buildAnimatedWidget(
                   delay: 500,
                   child: Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.grey[850]
-                          : Colors.grey[50],
-                      borderRadius: BorderRadius.circular(12),
+                      color: isDarkMode
+                          ? Colors.grey.shade800.withOpacity(0.5)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.grey[800]!
-                            : Colors.grey[200]!
+                        color: isDarkMode
+                            ? Colors.grey.shade700
+                            : Colors.grey.shade200,
                       ),
+                      boxShadow: isDarkMode
+                          ? null
+                          : [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.03),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Business Summary',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.business,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Business Summary',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 12),
+                        
+                        const SizedBox(height: 20),
+                        
+                        // Summary items with improved layout
                         _buildSummaryItem(
                           'Name',
                           _businessNameController.text.isEmpty 
                               ? 'Not provided' 
                               : _businessNameController.text,
+                          isDarkMode,
                         ),
+                        
                         if (_businessDescriptionController.text.isNotEmpty)
                           _buildSummaryItem(
                             'Description',
                             _businessDescriptionController.text,
+                            isDarkMode,
                           ),
+                          
                         if (_selectedCategory != null)
-                          _buildSummaryItem('Category', _selectedCategory!),
-                        _buildSummaryItem(
-                          'Logo',
-                          _logoImageBytes != null ? 'Uploaded' : 'Not uploaded',
-                        ),
+                          _buildSummaryItem('Category', _selectedCategory!, isDarkMode),
+                          
                         _buildSummaryItem(
                           'Connected Review Platforms',
                           _reviewPlatformControllers.values
                               .where((controller) => controller.text.trim().isNotEmpty)
                               .length
                               .toString(),
+                          isDarkMode,
                         ),
                       ],
                     ),
@@ -917,47 +933,115 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
                 
                 const SizedBox(height: 32),
                 
-                // Benefits list
+                // Benefits list with improved design
                 _buildAnimatedWidget(
                   delay: 600,
                   child: Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.grey[850]
-                          : Colors.grey[50],
-                      borderRadius: BorderRadius.circular(12),
+                    color: isDarkMode
+                          ? Theme.of(context).primaryColor.withOpacity(0.08)
+                          : Theme.of(context).primaryColor.withOpacity(0.03),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.grey[800]!
-                            : Colors.grey[200]!
+                        color: isDarkMode
+                            ? Theme.of(context).primaryColor.withOpacity(0.2)
+                            : Theme.of(context).primaryColor.withOpacity(0.1),
                       ),
                     ),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Text(
+                          'What\'s Next?',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
                         _buildBenefitItem(
                           icon: Icons.star,
                           title: 'Collect positive reviews',
                           subtitle: 'Boost your online reputation',
+                          isDarkMode: isDarkMode,
                         ),
                         const SizedBox(height: 16),
                         _buildBenefitItem(
                           icon: Icons.filter_alt,
                           title: 'Filter negative feedback',
                           subtitle: 'Address issues before they go public',
+                          isDarkMode: isDarkMode,
                         ),
                         const SizedBox(height: 16),
                         _buildBenefitItem(
                           icon: Icons.qr_code,
                           title: 'QR code integration',
                           subtitle: 'Make it easy for customers to leave reviews',
+                          isDarkMode: isDarkMode,
                         ),
                       ],
                     ),
                   ),
                 ),
-
                 
+                // Get started tip
+                _buildAnimatedWidget(
+                  delay: 700,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 32.0),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDarkMode
+                            ? Colors.green.shade900.withOpacity(0.2)
+                            : Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDarkMode
+                              ? Colors.green.shade800.withOpacity(0.3)
+                              : Colors.green.shade200,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle_outline,
+                            color: Colors.green[600],
+                            size: 24,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Ready to Launch!',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: Colors.green[600],
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Click "Finish" below to complete setup and start exploring your dashboard.',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: isDarkMode 
+                                        ? Colors.grey[300] 
+                                        : Colors.grey[800],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -966,8 +1050,6 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
     );
   }
 
-  // Helper widgets with animations
-  
   Widget _buildAnimatedField({
     required TextEditingController controller,
     required String label,
@@ -976,9 +1058,9 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
     int maxLines = 1,
     int delay = 0,
     bool required = false,
+    required bool isDarkMode,
   }) {
     // Determine appropriate colors based on theme
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final borderColor = isDarkMode ? Colors.grey[700]! : Colors.grey[300]!;
     final fillColor = isDarkMode ? Colors.grey[800] : Colors.grey[50];
     
@@ -992,24 +1074,25 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
           hintText: hint,
           prefixIcon: Icon(icon),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(color: borderColor),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(color: borderColor),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Theme.of(context).primaryColor),
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
           ),
           filled: true,
           fillColor: fillColor,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
-            vertical: 12,
+            vertical: 16,
           ),
           alignLabelWithHint: maxLines > 1,
+          floatingLabelBehavior: FloatingLabelBehavior.auto,
         ),
       ),
     );
@@ -1023,9 +1106,9 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
     String? value,
     required Function(String?) onChanged,
     int delay = 0,
+    required bool isDarkMode,
   }) {
     // Determine appropriate colors based on theme
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final borderColor = isDarkMode ? Colors.grey[700]! : Colors.grey[300]!;
     final fillColor = isDarkMode ? Colors.grey[800] : Colors.grey[50];
     
@@ -1037,22 +1120,22 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
           labelText: label,
           prefixIcon: Icon(icon),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(color: borderColor),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(color: borderColor),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Theme.of(context).primaryColor),
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
           ),
           filled: true,
           fillColor: fillColor,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
-            vertical: 12,
+            vertical: 16,
           ),
         ),
         hint: Text(hint),
@@ -1063,6 +1146,9 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
           );
         }).toList(),
         onChanged: onChanged,
+        isExpanded: true,
+        icon: const Icon(Icons.arrow_drop_down_circle_outlined),
+        dropdownColor: isDarkMode ? Colors.grey[700] : Colors.white,
       ),
     );
   }
@@ -1072,9 +1158,9 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
     required TextEditingController controller,
     required IconData icon,
     required int delay,
+    required bool isDarkMode,
   }) {
     // Determine appropriate colors based on theme
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final borderColor = isDarkMode ? Colors.grey[700]! : Colors.grey[300]!;
     final fillColor = isDarkMode ? Colors.grey[800] : Colors.grey[50];
     
@@ -1086,53 +1172,67 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
           labelText: '$platform Link',
           hintText: 'Enter your $platform profile URL',
           prefixIcon: Icon(icon),
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.info_outline, size: 20),
+            onPressed: () {
+              // Show info tooltip
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Enter the URL where customers can review your business on $platform'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+          ),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(color: borderColor),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(color: borderColor),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Theme.of(context).primaryColor),
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
           ),
           filled: true,
           fillColor: fillColor,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
-            vertical: 12,
+            vertical: 16,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildSummaryItem(String label, String value) {
+  Widget _buildSummaryItem(String label, String value, bool isDarkMode) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Row(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              '$label:',
-              style: const TextStyle(
-                fontWeight: FontWeight.w500,
-              ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
             ),
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark 
-                    ? Colors.grey[300] 
-                    : Colors.grey[700],
-              ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: isDarkMode ? Colors.white : Colors.black87,
             ),
+          ),
+          const SizedBox(height: 8),
+          Divider(
+            color: isDarkMode ? Colors.grey[700] : Colors.grey[200],
+            height: 1,
           ),
         ],
       ),
@@ -1143,14 +1243,15 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
     required IconData icon,
     required String title,
     required String subtitle,
+    required bool isDarkMode,
   }) {
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: Theme.of(context).primaryColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
             icon,
@@ -1158,23 +1259,25 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
             size: 22,
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 15,
+                  fontSize: 16,
+                  color: isDarkMode ? Colors.white : Colors.black87,
                 ),
               ),
+              const SizedBox(height: 4),
               Text(
                 subtitle,
                 style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 13,
+                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                  fontSize: 14,
                 ),
               ),
             ],
@@ -1233,6 +1336,8 @@ class CircularProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return SizedBox(
       width: size,
       height: size,
@@ -1246,7 +1351,7 @@ class CircularProgressBar extends StatelessWidget {
               value: 1.0,
               strokeWidth: strokeWidth,
               valueColor: AlwaysStoppedAnimation<Color>(
-                Theme.of(context).brightness == Brightness.dark
+                isDarkMode
                     ? Colors.grey[800]!
                     : Colors.grey[200]!,
               ),

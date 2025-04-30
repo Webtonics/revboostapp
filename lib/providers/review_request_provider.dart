@@ -108,7 +108,7 @@ class ReviewRequestProvider with ChangeNotifier {
     }
   }
   
-  /// Create and send a review request
+  // / Create and send a review request
   Future<bool> createAndSendReviewRequest({
     required String customerName,
     required String customerEmail,
@@ -167,6 +167,86 @@ class ReviewRequestProvider with ChangeNotifier {
       return false;
     }
   }
+  // Improved createAndSendReviewRequest method with better error handling and logging
+// Future<bool> createAndSendReviewRequest({
+//   required String customerName,
+//   required String customerEmail,
+//   String? customerPhone,
+//   required BusinessModel business,
+//   String? replyToEmail,
+//   Map<String, dynamic>? metadata,
+// }) async {
+//   try {
+//     debugPrint('Starting to create and send review request to: $customerEmail');
+    
+//     _status = ReviewRequestOperationStatus.loading;
+//     _errorMessage = null;
+//     notifyListeners();
+    
+//     // Create review link with special tracking parameter
+//     const baseUrl = "https://app.revboostapp.com";
+//     final reviewLink = '$baseUrl/r/${business.id}';
+    
+//     debugPrint('Generated review link: $reviewLink');
+    
+//     // Test server connection before proceeding with the request
+//     final emailService = _reviewRequestService._emailService;
+//     final serverConnected = await emailService.testServerConnection();
+    
+//     if (!serverConnected) {
+//       throw Exception('Cannot connect to email server. The server might be down or hibernating. Please try again in a few moments.');
+//     }
+    
+//     // Create the review request
+//     debugPrint('Creating review request in database...');
+//     final requestId = await _reviewRequestService.createReviewRequest(
+//       businessId: _businessId,
+//       customerName: customerName,
+//       customerEmail: customerEmail,
+//       customerPhone: customerPhone,
+//       reviewLink: reviewLink,
+//       metadata: {
+//         'source': 'manual',
+//         'createdAt': DateTime.now().toIso8601String(),
+//         ...metadata ?? {},
+//       },
+//     );
+    
+//     debugPrint('Review request created with ID: $requestId');
+    
+//     // Send the email
+//     debugPrint('Sending email to $customerEmail...');
+//     final success = await _reviewRequestService.sendReviewRequestEmail(
+//       requestId: requestId,
+//       customerName: customerName,
+//       customerEmail: customerEmail,
+//       businessName: _businessName,
+//       reviewLink: reviewLink,
+//       replyToEmail: replyToEmail,
+//     );
+    
+//     if (success) {
+//       debugPrint('Email sent successfully to $customerEmail');
+//     } else {
+//       debugPrint('Failed to send email to $customerEmail');
+//       throw Exception('Email service failed to send the email. Please try again later.');
+//     }
+    
+//     // Refresh statistics
+//     await refreshStatistics();
+    
+//     _status = ReviewRequestOperationStatus.success;
+//     notifyListeners();
+    
+//     return success;
+//   } catch (e) {
+//     debugPrint('Error in createAndSendReviewRequest: $e');
+//     _status = ReviewRequestOperationStatus.error;
+//     _errorMessage = e.toString();
+//     notifyListeners();
+//     return false;
+//   }
+// }
   
   /// Delete a review request
   Future<bool> deleteReviewRequest(String requestId) async {

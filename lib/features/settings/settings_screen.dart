@@ -1,10 +1,12 @@
 // lib/features/settings/screens/settings_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:revboostapp/core/theme/app_colors.dart';
 import 'package:revboostapp/providers/auth_provider.dart';
 import 'package:revboostapp/providers/settings_provider.dart';
+import 'package:revboostapp/routing/app_router.dart';
 import 'package:revboostapp/widgets/common/app_button.dart';
 import 'package:revboostapp/widgets/common/loading_overlay.dart';
 import 'package:revboostapp/widgets/layout/app_layout.dart';
@@ -275,6 +277,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               text: 'Set Up Business',
               onPressed: () {
                 // Navigate to business setup
+                context.go(AppRoutes.businessSetup);
               },
             ),
           ],
@@ -631,42 +634,42 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
           
           const SizedBox(height: 48),
           
-          // Danger zone
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.error.withOpacity(0.5)),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Danger Zone',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppColors.error,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Delete your account and all associated data. This action cannot be undone.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    _showDeleteAccountDialog();
-                  },
-                  icon: const Icon(Icons.delete_forever, color: AppColors.error),
-                  label: const Text('Delete Account'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.error,
-                    side: const BorderSide(color: AppColors.error),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // // Danger zone
+          // Container(
+          //   padding: const EdgeInsets.all(16),
+          //   decoration: BoxDecoration(
+          //     border: Border.all(color: AppColors.error.withOpacity(0.5)),
+          //     borderRadius: BorderRadius.circular(8),
+          //   ),
+          //   child: Column(
+          //     crossAxisAlignment: CrossAxisAlignment.start,
+          //     children: [
+          //       Text(
+          //         'Danger Zone',
+          //         style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          //           color: AppColors.error,
+          //         ),
+          //       ),
+          //       const SizedBox(height: 16),
+          //       Text(
+          //         'Delete your account and all associated data. This action cannot be undone.',
+          //         style: Theme.of(context).textTheme.bodyMedium,
+          //       ),
+          //       const SizedBox(height: 16),
+          //       OutlinedButton.icon(
+          //         onPressed: () {
+          //           _showDeleteAccountDialog();
+          //         },
+          //         icon: const Icon(Icons.delete_forever, color: AppColors.error),
+          //         label: const Text('Delete Account'),
+          //         style: OutlinedButton.styleFrom(
+          //           foregroundColor: AppColors.error,
+          //           side: const BorderSide(color: AppColors.error),
+          //         ),
+          //       ),
+          //     ],
+          //   ),
+          // ),
           
           const SizedBox(height: 32),
           

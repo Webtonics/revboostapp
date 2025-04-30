@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:revboostapp/core/theme/app_colors.dart';
+import 'package:revboostapp/features/onboarding/services/onboarding_service.dart';
 import 'package:revboostapp/providers/auth_provider.dart';
 import 'package:revboostapp/routing/app_router.dart';
 import 'package:revboostapp/widgets/common/app_button.dart';
@@ -48,6 +49,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
+      await OnboardingService.resetOnboardingStatus();
       await Provider.of<AuthProvider>(context, listen: false).signUp(
         _emailController.text.trim(),
         _passwordController.text,

@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import 'package:revboostapp/core/theme/app_colors.dart';
 import 'package:revboostapp/providers/auth_provider.dart';
 import 'package:revboostapp/routing/app_router.dart';
-import 'package:revboostapp/widgets/common/theme_toggle.dart';
 
 // Color variables for easy customization
 class AppLayoutColors {
@@ -144,7 +143,7 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
   
   Widget _buildDesktopHeader() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final headerHeight = 70.0;
+    const headerHeight = 70.0;
     final headerColor = isDarkMode 
         ? AppLayoutColors.darkHeaderBg
         : AppLayoutColors.lightHeaderBg;
@@ -182,7 +181,7 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
           // Right side actions
           Row(
             children: [
-              const ThemeToggle(showLabel: false),
+              // const ThemeToggle(showLabel: false),
               const SizedBox(width: 16),
               _buildUserProfile(),
             ],
@@ -224,24 +223,24 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
                 _scaffoldKey.currentState!.openDrawer();
               },
             ),
-      actions: const[
-         ThemeToggle(showLabel: false),
-         SizedBox(width: 8),
-      ],
+      // actions: const[
+      //    ThemeToggle(showLabel: false),
+      //    SizedBox(width: 8),
+      // ],
     );
   }
   
   Widget _buildSidebar(bool isSmallScreen) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    // final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final width = isSmallScreen
         ? 280.0
         : (_isSidebarCollapsed ? 80.0 : 280.0);
     
     // Sidebar color - always dark for the demo
-    final sidebarColor = AppLayoutColors.darkSidebarBg;
+    const sidebarColor = AppLayoutColors.darkSidebarBg;
     
     // Text colors - adjusted for dark sidebar
-    final textColor = Colors.grey[300]!;
+    // final textColor = Colors.grey[300]!;
     final textColorSecondary = Colors.grey[500]!;
     
     final sidebarContent = Column(
@@ -390,7 +389,7 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
   }
   
   Widget _buildSidebarHeader(bool isSmallScreen) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    // final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
     return SafeArea(
       child: Container(
@@ -420,11 +419,7 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Center(
-                  child: Icon(
-                    Icons.star_rounded,
-                    size: 24,
-                    color: AppColors.primary,
-                  ),
+                  child: Image(image: AssetImage("assets/branding_dark.png"), height: 24),
                 ),
               )
             else
@@ -438,12 +433,10 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Center(
-                      child: Icon(
-                        Icons.star_rounded,
-                        size: 24,
-                        color: AppColors.primary,
-                      ),
-                    ),
+                     
+                  child: Image(image: AssetImage("assets/branding_dark.png"), height: 24),
+                ),
+                  
                   ),
                   const SizedBox(width: 16),
                   const Text(
@@ -621,7 +614,7 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
         child: InkWell(
           onTap: () {
             Provider.of<AuthProvider>(context, listen: false).signOut();
-            context.go(AppRoutes.splash);
+            context.go(AppRoutes.login);
           },
           child: const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -765,7 +758,7 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
             value: 'logout',
             onTap: () {
               Provider.of<AuthProvider>(context, listen: false).signOut();
-              context.go(AppRoutes.splash);
+              context.go(AppRoutes.login);
             },
             child: Row(
               children: [

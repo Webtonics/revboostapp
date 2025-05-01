@@ -647,7 +647,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
-                  'Just \$${(plan.price / 12).toStringAsFixed(2)} per month',
+                  // 'Just \$${(plan.price / 12).toStringAsFixed(2)} per month',
+                  '',
                   style: TextStyle(
                     color: Colors.green[700],
                     fontWeight: FontWeight.w500,
@@ -952,7 +953,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  '14-Day Money-Back Guarantee',
+                  '14-Day Free trial',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: Colors.green[800],
@@ -960,7 +961,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Try RevBoost Pro risk-free. If you\'re not completely satisfied within the first 14 days, we\'ll refund your payment in full — no questions asked.',
+                  'Try RevBoost Pro risk-free. Try it out for 14 days and cancel at any time.',
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.green[800],
@@ -1037,7 +1038,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                         _buildFaqItem(
                           context,
                           'Do you offer refunds?',
-                          'Yes, we offer a 14-day money-back guarantee. If you\'re not satisfied with RevBoost Pro for any reason, contact our support team within 14 days of your purchase for a full refund.',
+                          'Yes, we also offer a 14-day free trial.',
                         ),
                         _buildFaqItem(
                           context,

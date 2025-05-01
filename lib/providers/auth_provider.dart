@@ -387,4 +387,28 @@ class AuthProvider with ChangeNotifier {
       debugPrint('Error reloading auth state: $e');
     }
   }
+  /// Updates the user's business setup completion status
+Future<void> updateUserSetupStatus(bool hasCompleted) async {
+  try {
+    if (_user == null || _firebaseUser == null) {
+      throw Exception('No authenticated user found');
+    }
+    
+    // Update local user model first
+    _user = _user!.copyWith(
+      hasCompletedSetup: hasCompleted,
+      updatedAt: DateTime.now(),
+    );
+    
+    // Update Firestore document
+    await _firestoreService.updateUser(_user!);
+    
+    debugPrint('✅ User setup status updated: $hasCompleted');
+    notifyListeners();
+  } catch (e) {
+    _errorMessage = e.toString();
+    debugPrint('❌ Error updating user setup status: $e');
+    throw Exception(_errorMessage);
+  }
+}
 }

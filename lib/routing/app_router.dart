@@ -18,6 +18,7 @@ import 'package:revboostapp/features/reviews/screens/public_review_screen.dart';
 import 'package:revboostapp/features/settings/settings_screen.dart';
 import 'package:revboostapp/features/splash/screens/splash_screen.dart';
 import 'package:revboostapp/features/subscription/screens/subscription_screen.dart';
+import 'package:revboostapp/features/subscription/screens/subscription_success_screen.dart';
 import 'package:revboostapp/providers/auth_provider.dart';
 import 'package:revboostapp/providers/subscription_provider.dart';
 import 'package:revboostapp/widgets/layout/app_bar_with_theme_toggle.dart';
@@ -50,6 +51,7 @@ class AppRoutes {
   static const String qrCode = '/qr-code';
   static const String templates = '/templates';
   static const String subscription = '/subscription';
+  static const String subscriptionSuccess = '/subscription/success';
   
   // Returns all public routes that don't require authentication
   static final List<String> publicRoutes = [
@@ -406,6 +408,25 @@ class AppRouter {
           builder: (context, state) {
             final businessId = state.pathParameters['businessId'] ?? '';
             return PublicReviewScreen(businessId: businessId);
+          },
+        ),
+
+        GoRoute(
+          path: AppRoutes.subscriptionSuccess,
+          builder: (context, state) {
+            // Extract planId from query parameters or route state's extras
+            String? planId;
+            
+            // Check if we have extras with planId
+            if (state.extra != null && state.extra is Map) {
+              final extras = state.extra as Map;
+              planId = extras['planId'] as String?;
+            }
+            
+            // If not in extras, try query params
+            planId ??= state.uri.queryParameters['planId'];
+            
+            return SubscriptionSuccessScreen(planId: planId);
           },
         ),
       ],

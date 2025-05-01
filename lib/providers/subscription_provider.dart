@@ -69,7 +69,8 @@ class SubscriptionProvider with ChangeNotifier {
           'Private feedback collection',
           'Priority support',
         ],
-        lemonSqueezyProductId: '5411962e-7695-4cb0-9f79-271fbc0c2964', // Test product ID
+        // lemonSqueezyProductId: '5411962e-7695-4cb0-9f79-271fbc0c2964', // Test product ID
+        lemonSqueezyProductId: '0016db55-8733-4da7-977f-0d6e61bdab26', // Live product ID
       ),
       SubscriptionPlan(
         id: 'yearly',
@@ -83,7 +84,8 @@ class SubscriptionProvider with ChangeNotifier {
           'Priority 24/7 support',
           'Dedicated account manager',
         ],
-        lemonSqueezyProductId: 'b5efc2ff-8c50-4d47-a34a-5e317feea837', // Test product ID
+        // lemonSqueezyProductId: 'b5efc2ff-8c50-4d47-a34a-5e317feea837', // Test product ID
+        lemonSqueezyProductId: '167fb4dc-feaa-47c5-8447-df7b938a9564', // Live product ID
       ),
     ];
   }

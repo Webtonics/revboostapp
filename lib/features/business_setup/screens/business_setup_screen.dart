@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
-import 'package:revboostapp/core/theme/app_colors.dart';
 import 'package:revboostapp/features/onboarding/services/onboarding_service.dart';
+import 'package:revboostapp/providers/auth_provider.dart';
 import 'package:revboostapp/providers/business_setup_provider.dart';
 import 'package:revboostapp/routing/app_router.dart';
 import 'package:revboostapp/widgets/common/app_button.dart';
@@ -207,67 +207,145 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
       });
     }
   }
-
-  Future<void> _completeSetup() async {
-    // Show loading indicator
-    setState(() {
-      _isLoading = true;
-    });
+Future<void> _completeSetup() async {
+  // Show loading indicator
+  setState(() {
+    _isLoading = true;
+  });
+  
+  try {
+    // Get providers
+    final businessProvider = Provider.of<BusinessSetupProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     
-    try {
-      // Get provider
-      final provider = Provider.of<BusinessSetupProvider>(context, listen: false);
-      
-      // Ensure business info is set
-      provider.setBusinessInfo(
-        name: _businessNameController.text.trim(),
-        description: _businessDescriptionController.text.trim(),
-      );
-      
-      // Save review platform links
-      for (final platform in _reviewPlatformControllers.keys) {
-        final link = _reviewPlatformControllers[platform]!.text.trim();
-        if (link.isNotEmpty) {
-          provider.setReviewLink(platform, link);
-        } else {
-          provider.removeReviewLink(platform);
-        }
-      }
-      
-      // Save business setup to Firebase (without logo)
-      await provider.saveBusinessSetup();
-      
-      // Mark onboarding as completed
-      await OnboardingService.setBusinessSetupCompleted();
-      
-      // Hide loading indicator
-      setState(() {
-        _isLoading = false;
-      });
-      
-      // Navigation fix: First check if mounted, then navigate
-      if (mounted) {
-        // Navigate to dashboard through splash for proper redirection
-        context.go(AppRoutes.splash);
-      }
-    } catch (e) {
-      // Hide loading indicator
-      setState(() {
-        _isLoading = false;
-      });
-      
-      // Show error message if mounted
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.red.shade700,
-          ),
-        );
+    // Ensure business info is set
+    businessProvider.setBusinessInfo(
+      name: _businessNameController.text.trim(),
+      description: _businessDescriptionController.text.trim(),
+    );
+    
+    // Save review platform links
+    for (final platform in _reviewPlatformControllers.keys) {
+      final link = _reviewPlatformControllers[platform]!.text.trim();
+      if (link.isNotEmpty) {
+        businessProvider.setReviewLink(platform, link);
+      } else {
+        businessProvider.removeReviewLink(platform);
       }
     }
+    
+    // Save business setup to Firebase (without logo)
+    await businessProvider.saveBusinessSetup();
+    
+    // Mark setup as completed in OnboardingService
+    await OnboardingService.setBusinessSetupCompleted();
+    
+    // Update the user's hasCompletedSetup flag in AuthProvider
+    await authProvider.updateUserSetupStatus(true);
+    
+    // Force reload the user data to get updated status
+    await authProvider.reloadAuthState();
+    
+    // Hide loading indicator
+    setState(() {
+      _isLoading = false;
+    });
+    
+    // Navigation: check if mounted, then navigate
+    if (mounted) {
+      // Navigate directly to dashboard instead of splash
+      debugPrint('⚡ Business setup completed, navigating to dashboard');
+      context.go(AppRoutes.dashboard);
+    }
+  } catch (e) {
+    // Hide loading indicator
+    setState(() {
+      _isLoading = false;
+    });
+    
+    // Show error message if mounted
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    }
   }
+}
+//   Future<void> _completeSetup() async {
+//   // Show loading indicator
+//   setState(() {
+//     _isLoading = true;
+//   });
+  
+//   try {
+//     // Get providers
+//     final businessProvider = Provider.of<BusinessSetupProvider>(context, listen: false);
+//     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+//     // Ensure business info is set
+//     businessProvider.setBusinessInfo(
+//       name: _businessNameController.text.trim(),
+//       description: _businessDescriptionController.text.trim(),
+//     );
+    
+//     // Save review platform links
+//     for (final platform in _reviewPlatformControllers.keys) {
+//       final link = _reviewPlatformControllers[platform]!.text.trim();
+//       if (link.isNotEmpty) {
+//         businessProvider.setReviewLink(platform, link);
+//       } else {
+//         businessProvider.removeReviewLink(platform);
+//       }
+//     }
+    
+//     // Save business setup to Firebase (without logo)
+//     await businessProvider.saveBusinessSetup();
+    
+//     // Mark setup as completed in both services
+//     await OnboardingService.setBusinessSetupCompleted();
+    
+//     // This is critical: update the user object in auth provider
+//     await authProvider.updateUserSetupStatus(true);
+    
+//     // Ensure the user data is fully reloaded to reflect the change
+//     await authProvider.reloadUser();
+    
+//     // Add a small delay to ensure Firebase updates are registered
+//     await Future.delayed(const Duration(milliseconds: 500));
+    
+//     // Hide loading indicator
+//     setState(() {
+//       _isLoading = false;
+//     });
+    
+//     // Navigation: check if mounted, then navigate
+//     if (mounted) {
+//       // Navigate to dashboard through splash for proper redirection
+//       debugPrint('⚡ Business setup completed, navigating to dashboard');
+//       context.go(AppRoutes.dashboard);
+//     }
+//   } catch (e) {
+//     // Hide loading indicator
+//     setState(() {
+//       _isLoading = false;
+//     });
+    
+//     // Show error message if mounted
+//     if (mounted) {
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         SnackBar(
+//           content: Text('Error: ${e.toString()}'),
+//           behavior: SnackBarBehavior.floating,
+//           backgroundColor: Colors.red.shade700,
+//         ),
+//       );
+//     }
+//   }
+// }
 
   @override
   Widget build(BuildContext context) {

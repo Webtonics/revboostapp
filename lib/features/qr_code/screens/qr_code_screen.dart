@@ -488,10 +488,7 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
   
   @override
   Widget build(BuildContext context) {
-    return AppLayout(
-      title: 'QR Code',
-      child: _buildContent(),
-    );
+    return _buildContent();
   }
 
   Widget _buildContent() {

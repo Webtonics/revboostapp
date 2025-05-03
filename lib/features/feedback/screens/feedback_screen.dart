@@ -86,115 +86,112 @@ class _BusinessFeedbackPageState extends State<BusinessFeedbackPage> {
 
   @override
   Widget build(BuildContext context) {
-    return AppLayout(
-      title: 'Customer Feedback',
-      child: FutureBuilder<List<FeedbackModel>>(
-        future: _feedbacksFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          
-          if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Error loading feedback',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${snapshot.error}',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _feedbacksFuture = _loadBusinessDataAndFeedback();
-                      });
-                    },
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            );
-          }
-          
-          final feedbacks = snapshot.data ?? [];
-          
-          if (feedbacks.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.feedback_outlined,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.secondary.withOpacity(0.5),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No feedback yet',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'When customers provide feedback, it will appear here.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            );
-          }
-          
-          // Show business info at the top
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (_businessName != null)
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+    return FutureBuilder<List<FeedbackModel>>(
+      future: _feedbacksFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Error loading feedback',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${snapshot.error}',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _feedbacksFuture = _loadBusinessDataAndFeedback();
+                    });
+                  },
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        }
+        
+        final feedbacks = snapshot.data ?? [];
+        
+        if (feedbacks.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.feedback_outlined,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.secondary.withOpacity(0.5),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No feedback yet',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'When customers provide feedback, it will appear here.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
+        
+        // Show business info at the top
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_businessName != null)
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _businessName!,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        if (_userEmail != null)
                           Text(
-                            _businessName!,
-                            style: Theme.of(context).textTheme.titleLarge,
+                            _userEmail!,
+                            style: Theme.of(context).textTheme.bodyMedium,
                           ),
-                          if (_userEmail != null)
-                            Text(
-                              _userEmail!,
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Total Feedback: ${feedbacks.length}',
-                            style: Theme.of(context).textTheme.bodyLarge,
-                          ),
-                        ],
-                      ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Total Feedback: ${feedbacks.length}',
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              
-              Expanded(
-                child: ListView.builder(
-                  itemCount: feedbacks.length,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  itemBuilder: (context, index) => _buildFeedbackCard(feedbacks[index], index),
-                ),
               ),
-            ],
-          );
-        },
-      ),
+            
+            Expanded(
+              child: ListView.builder(
+                itemCount: feedbacks.length,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                itemBuilder: (context, index) => _buildFeedbackCard(feedbacks[index], index),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

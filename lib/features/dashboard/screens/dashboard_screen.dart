@@ -574,225 +574,222 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AppLayout(
-      title: 'Dashboard',
-      child: Consumer<DashboardProvider>(
-        builder: (context, dashboardProvider, child) {
-          if (dashboardProvider.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-          
-          if (dashboardProvider.errorMessage != null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Error',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    dashboardProvider.errorMessage!,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () => dashboardProvider.loadDashboardData(),
-                    child: const Text('Try Again'),
-                  ),
-                ],
-              ),
-            );
-          }
-          
-          final business = dashboardProvider.businessData;
-          if (business == null) {
-            return const Center(
-              child: Text('No business data available'),
-            );
-          }
-          
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+    return Consumer<DashboardProvider>(
+      builder: (context, dashboardProvider, child) {
+        if (dashboardProvider.isLoading) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+        
+        if (dashboardProvider.errorMessage != null) {
+          return Center(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Welcome section
+                Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                const SizedBox(height: 16),
                 Text(
-                  'Welcome, ${business.name}!',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  'Error',
+                  style: Theme.of(context).textTheme.headlineMedium,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Manage your online reviews and reputation',
+                  dashboardProvider.errorMessage!,
+                  textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
-                const SizedBox(height: 32),
-                
-                // Business card
-                Card(
-                  elevation: 2,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).primaryColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                Icons.business,
-                                color: Theme.of(context).primaryColor,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    business.name,
-                                    style: Theme.of(context).textTheme.titleLarge,
-                                  ),
-                                  if (business.description != null && business.description!.isNotEmpty)
-                                    Text(
-                                      business.description!,
-                                      style: Theme.of(context).textTheme.bodyMedium,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        
-                        if (business.reviewLinks.isNotEmpty) ...[
-                          const Divider(height: 32),
-                          Text(
-                            'Connected Review Platforms',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: business.reviewLinks.entries.map((entry) {
-                              IconData icon;
-                              switch (entry.key) {
-                                case 'Google Business Profile':
-                                  icon = Icons.business;
-                                  break;
-                                case 'Yelp':
-                                  icon = Icons.restaurant_menu;
-                                  break;
-                                case 'Facebook':
-                                  icon = Icons.facebook;
-                                  break;
-                                default:
-                                  icon = Icons.link;
-                              }
-                              
-                              return GestureDetector(
-                                onTap: () => context.go(AppRoutes.settings),
-                                child: Chip(
-                                  avatar: Icon(icon, size: 16),
-                                  label: Text(entry.key),
-                                  
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () => dashboardProvider.loadDashboardData(),
+                  child: const Text('Try Again'),
                 ),
-                
-                const SizedBox(height: 32),
-                
-                // Quick actions section
-                Text(
-                  'Quick Actions',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: _getColumnCount(context),
-                  crossAxisSpacing: 4,
-                  mainAxisSpacing: 4,
-                  childAspectRatio: 1.3,
-                  children: [
-                    _buildActionCard(
-                      context,
-                      'View QR Code',
-                      // 'Generate and print QR codes',
-                      Icons.qr_code,
-                      Colors.purple,
-                      () => context.go(AppRoutes.qrCode),
-                    ),
-                    _buildActionCard(
-                      context,
-                      'Send Review Request',
-                      // 'Email or SMS to customers',
-                      Icons.send,
-                      Colors.blue,
-                      () => context.go(AppRoutes.reviewRequests),
-                    ),
-                    _buildActionCard(
-                      context,
-                      'Manage Account',
-                      // 'Update business details',
-                      Icons.people,
-                      Colors.orange,
-                      () =>context.go(AppRoutes.settings),
-                    ),
-                    _buildActionCard(
-                      context,
-                      'Manage Subscriptions',
-                      // 'Manage your subscriptions',
-                      Icons.subscriptions,
-                      // Icons.description,
-                      Colors.green,
-                      () => context.go(AppRoutes.subscription),
-                    ),
-                  ],
-                ),
-                
-                const SizedBox(height: 32),
-                
-                // Coming soon features
-                _buildComingSoonSection(context),
               ],
             ),
           );
-        },
-      ),
+        }
+        
+        final business = dashboardProvider.businessData;
+        if (business == null) {
+          return const Center(
+            child: Text('No business data available'),
+          );
+        }
+        
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Welcome section
+              Text(
+                'Welcome, ${business.name}!',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Manage your online reviews and reputation',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 32),
+              
+              // Business card
+              Card(
+                elevation: 2,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.business,
+                              color: Theme.of(context).primaryColor,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  business.name,
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
+                                if (business.description != null && business.description!.isNotEmpty)
+                                  Text(
+                                    business.description!,
+                                    style: Theme.of(context).textTheme.bodyMedium,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      if (business.reviewLinks.isNotEmpty) ...[
+                        const Divider(height: 32),
+                        Text(
+                          'Connected Review Platforms',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: business.reviewLinks.entries.map((entry) {
+                            IconData icon;
+                            switch (entry.key) {
+                              case 'Google Business Profile':
+                                icon = Icons.business;
+                                break;
+                              case 'Yelp':
+                                icon = Icons.restaurant_menu;
+                                break;
+                              case 'Facebook':
+                                icon = Icons.facebook;
+                                break;
+                              default:
+                                icon = Icons.link;
+                            }
+                            
+                            return GestureDetector(
+                              onTap: () => context.go(AppRoutes.settings),
+                              child: Chip(
+                                avatar: Icon(icon, size: 16),
+                                label: Text(entry.key),
+                                
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 32),
+              
+              // Quick actions section
+              Text(
+                'Quick Actions',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: _getColumnCount(context),
+                crossAxisSpacing: 4,
+                mainAxisSpacing: 4,
+                childAspectRatio: 1.3,
+                children: [
+                  _buildActionCard(
+                    context,
+                    'View QR Code',
+                    // 'Generate and print QR codes',
+                    Icons.qr_code,
+                    Colors.purple,
+                    () => context.go(AppRoutes.qrCode),
+                  ),
+                  _buildActionCard(
+                    context,
+                    'Send Review Request',
+                    // 'Email or SMS to customers',
+                    Icons.send,
+                    Colors.blue,
+                    () => context.go(AppRoutes.reviewRequests),
+                  ),
+                  _buildActionCard(
+                    context,
+                    'Manage Account',
+                    // 'Update business details',
+                    Icons.people,
+                    Colors.orange,
+                    () =>context.go(AppRoutes.settings),
+                  ),
+                  _buildActionCard(
+                    context,
+                    'Manage Subscriptions',
+                    // 'Manage your subscriptions',
+                    Icons.subscriptions,
+                    // Icons.description,
+                    Colors.green,
+                    () => context.go(AppRoutes.subscription),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 32),
+              
+              // Coming soon features
+              _buildComingSoonSection(context),
+            ],
+          ),
+        );
+      },
     );
   }
   

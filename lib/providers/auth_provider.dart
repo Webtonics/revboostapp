@@ -17,6 +17,12 @@ class AuthProvider with ChangeNotifier {
   UserModel? _user;
   String? _errorMessage;
   
+  // Performance optimization: Tracking timestamps for caching and debouncing
+  DateTime? _lastUserReloadTime;
+  DateTime? _lastUserFetchTime;
+  bool _isReloadingUser = false;
+  bool _isFetchingUser = false;
+  
   AuthStatus get status => _status;
   User? get firebaseUser => _firebaseUser;
   UserModel? get user => _user;
@@ -32,26 +38,36 @@ class AuthProvider with ChangeNotifier {
   Future<void> _init() async {
     try {
       _authService.authStateChanges.listen((User? user) async {
-        debugPrint('Auth state changed: ${user?.uid}');
+        if (kDebugMode) {
+          debugPrint('Auth state changed: ${user?.uid}');
+        }
         _firebaseUser = user;
         
         if (user == null) {
           _status = AuthStatus.unauthenticated;
           _user = null;
-          debugPrint('AuthStatus set to: unauthenticated');
+          if (kDebugMode) {
+            debugPrint('AuthStatus set to: unauthenticated');
+          }
         } else {
           _status = AuthStatus.loading;
-          debugPrint('AuthStatus set to: loading');
+          if (kDebugMode) {
+            debugPrint('AuthStatus set to: loading');
+          }
           notifyListeners();
           
           try {
-            // Try to get the user document
+            // Try to get the user document with optimized fetching
             await _fetchUserData(user.uid);
             _status = AuthStatus.authenticated;
-            debugPrint('AuthStatus set to: authenticated');
+            if (kDebugMode) {
+              debugPrint('AuthStatus set to: authenticated');
+            }
           } catch (e) {
             // Create user document if needed
-            debugPrint('Error fetching user data, creating new document: $e');
+            if (kDebugMode) {
+              debugPrint('Error fetching user data, creating new document: $e');
+            }
             try {
               final newUser = UserModel(
                 id: user.uid,
@@ -66,11 +82,15 @@ class AuthProvider with ChangeNotifier {
               await _firestoreService.createUser(newUser);
               _user = newUser;
               _status = AuthStatus.authenticated;
-              debugPrint('Created new user document and authenticated');
+              if (kDebugMode) {
+                debugPrint('Created new user document and authenticated');
+              }
             } catch (createError) {
               _status = AuthStatus.error;
               _errorMessage = 'Failed to create user profile: $createError';
-              debugPrint('Failed to create user document: $createError');
+              if (kDebugMode) {
+                debugPrint('Failed to create user document: $createError');
+              }
             }
           }
         }
@@ -80,21 +100,46 @@ class AuthProvider with ChangeNotifier {
     } catch (e) {
       _status = AuthStatus.error;
       _errorMessage = e.toString();
-      debugPrint('Error in auth initialization: $e');
+      if (kDebugMode) {
+        debugPrint('Error in auth initialization: $e');
+      }
       notifyListeners();
     }
   }
     
+  // OPTIMIZED: User data fetching with debounce and caching
   Future<void> _fetchUserData(String userId) async {
+    // Prevent concurrent fetches
+    if (_isFetchingUser) {
+      if (kDebugMode) {
+        debugPrint('🛑 Already fetching user data, skipping request');
+      }
+      return;
+    }
+    
+    // Check if we need to fetch (cooldown period)
+    final now = DateTime.now();
+    if (_lastUserFetchTime != null && 
+        now.difference(_lastUserFetchTime!).inSeconds < 10 &&
+        _user != null) {
+      if (kDebugMode) {
+        debugPrint('⏱️ Using cached user data (fetched ${now.difference(_lastUserFetchTime!).inSeconds}s ago)');
+      }
+      return;
+    }
+    
     try {
+      _isFetchingUser = true;
+      
       final userDoc = await _firestoreService.getUserById(userId);
+      _lastUserFetchTime = now;
       
       if (userDoc != null) {
         // Update email verification status from Firebase Auth to the user model
         if (_firebaseUser != null) {
           final updatedUser = userDoc.copyWith(
             emailVerified: _firebaseUser!.emailVerified,
-            updatedAt: DateTime.now(),
+            updatedAt: now,
           );
           
           // Only update Firestore if verification status changed
@@ -118,8 +163,8 @@ class AuthProvider with ChangeNotifier {
             email: authUser.email ?? '',
             displayName: authUser.displayName,
             photoUrl: authUser.photoURL,
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
+            createdAt: now,
+            updatedAt: now,
             isActive: true,
             hasCompletedSetup: false, // Important: default to false
             emailVerified: authUser.emailVerified, // Add email verification status
@@ -132,8 +177,12 @@ class AuthProvider with ChangeNotifier {
         }
       }
     } catch (e) {
-      debugPrint('Error fetching user data: $e');
+      if (kDebugMode) {
+        debugPrint('Error fetching user data: $e');
+      }
       rethrow;
+    } finally {
+      _isFetchingUser = false;
     }
   }
   
@@ -144,7 +193,9 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
       
       // Log authentication attempt
-      debugPrint('Attempting to sign in with email: $email');
+      if (kDebugMode) {
+        debugPrint('Attempting to sign in with email: $email');
+      }
       
       // Authenticate with Firebase
       final userCredential = await _authService.signInWithEmailAndPassword(
@@ -156,7 +207,9 @@ class AuthProvider with ChangeNotifier {
       final user = userCredential.user;
       
       if (user != null) {
-        debugPrint('Successfully authenticated user: ${user.uid}');
+        if (kDebugMode) {
+          debugPrint('Successfully authenticated user: ${user.uid}');
+        }
         
         try {
           // Try to fetch user data
@@ -164,7 +217,9 @@ class AuthProvider with ChangeNotifier {
           _status = AuthStatus.authenticated;
         } catch (e) {
           // Create user document if not found
-          debugPrint('Creating user document for new authentication: ${user.uid}');
+          if (kDebugMode) {
+            debugPrint('Creating user document for new authentication: ${user.uid}');
+          }
           
           final newUser = UserModel(
             id: user.uid,
@@ -189,7 +244,9 @@ class AuthProvider with ChangeNotifier {
       _status = AuthStatus.error;
       _errorMessage = e.toString();
       notifyListeners();
-      debugPrint('Sign in error: $e');
+      if (kDebugMode) {
+        debugPrint('Sign in error: $e');
+      }
       throw Exception(_errorMessage);
     }
   }
@@ -235,6 +292,10 @@ class AuthProvider with ChangeNotifier {
   
   Future<void> signOut() async {
     try {
+      // Reset cached data on signout
+      _lastUserReloadTime = null;
+      _lastUserFetchTime = null;
+      
       await _authService.signOut();
       // Auth state changes listener will handle updating the status
     } catch (e) {
@@ -252,8 +313,6 @@ class AuthProvider with ChangeNotifier {
       throw Exception(_authService.getReadableAuthError(e));
     }
   }
-  
-  
   
   Future<void> updateProfile({String? displayName, String? photoUrl}) async {
     try {
@@ -284,7 +343,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
   
-  // Email verification methods
+  // OPTIMIZED: Email verification with improved error handling
   Future<void> sendEmailVerification() async {
     try {
       if (_firebaseUser == null) {
@@ -292,22 +351,48 @@ class AuthProvider with ChangeNotifier {
       }
       
       await _firebaseUser!.sendEmailVerification();
-      debugPrint('Verification email sent to: ${_firebaseUser!.email}');
+      if (kDebugMode) {
+        debugPrint('Verification email sent to: ${_firebaseUser!.email}');
+      }
     } catch (e) {
       _errorMessage = e.toString();
-      debugPrint('Error sending verification email: $e');
+      if (kDebugMode) {
+        debugPrint('Error sending verification email: $e');
+      }
       throw Exception(_errorMessage);
     }
   }
   
+  // OPTIMIZED: User reload with debounce and caching
   Future<void> reloadUser() async {
+    // Prevent concurrent reloads
+    if (_isReloadingUser) {
+      if (kDebugMode) {
+        debugPrint('🛑 Already reloading user, skipping duplicate request');
+      }
+      return;
+    }
+    
+    // Check if we need to reload (cooldown period)
+    final now = DateTime.now();
+    if (_lastUserReloadTime != null && 
+        now.difference(_lastUserReloadTime!).inSeconds < 15) {
+      if (kDebugMode) {
+        debugPrint('⏱️ Using cached user data (reloaded ${now.difference(_lastUserReloadTime!).inSeconds}s ago)');
+      }
+      return;
+    }
+    
     try {
+      _isReloadingUser = true;
+      
       if (_firebaseUser == null) {
         throw Exception('No authenticated user found');
       }
       
       // Reload the user to get the latest email verification status
       await _firebaseUser!.reload();
+      _lastUserReloadTime = now;
       
       // Update the current Firebase user reference
       final freshUser = _authService.currentUser;
@@ -318,7 +403,7 @@ class AuthProvider with ChangeNotifier {
         if (_user != null) {
           final updatedUser = _user!.copyWith(
             emailVerified: freshUser.emailVerified,
-            updatedAt: DateTime.now(),
+            updatedAt: now,
           );
           
           // Only update Firestore if verification status changed
@@ -333,12 +418,18 @@ class AuthProvider with ChangeNotifier {
           notifyListeners();
         }
         
-        debugPrint('User reloaded. Email verified: ${freshUser.emailVerified}');
+        if (kDebugMode) {
+          debugPrint('User reloaded. Email verified: ${freshUser.emailVerified}');
+        }
       }
     } catch (e) {
       _errorMessage = e.toString();
-      debugPrint('Error reloading user: $e');
+      if (kDebugMode) {
+        debugPrint('Error reloading user: $e');
+      }
       throw Exception(_errorMessage);
+    } finally {
+      _isReloadingUser = false;
     }
   }
   
@@ -349,12 +440,20 @@ class AuthProvider with ChangeNotifier {
         final currentUser = _authService.currentUser;
         if (currentUser != null) {
           _firebaseUser = currentUser;
-          await _fetchUserData(currentUser.uid);
+          
+          // Only fetch user data if we don't have it or it's stale
+          if (_user == null || _lastUserFetchTime == null || 
+              DateTime.now().difference(_lastUserFetchTime!).inMinutes > 5) {
+            await _fetchUserData(currentUser.uid);
+          }
+          
           _status = AuthStatus.authenticated;
           notifyListeners();
         }
       } catch (e) {
-        debugPrint('Error persisting auth state: $e');
+        if (kDebugMode) {
+          debugPrint('Error persisting auth state: $e');
+        }
       }
     }
   }
@@ -366,49 +465,66 @@ class AuthProvider with ChangeNotifier {
         _firebaseUser = currentUser;
         _status = AuthStatus.authenticated;
         
-        try {
-          await _fetchUserData(currentUser.uid);
-        } catch (e) {
-          // If user document not found but we have Firebase auth,
-          // consider them authenticated anyway
-          debugPrint('Error fetching user data, but Firebase user exists: $e');
+        // Only fetch user data if we don't have it or it's stale
+        if (_user == null || _lastUserFetchTime == null || 
+            DateTime.now().difference(_lastUserFetchTime!).inMinutes > 5) {
+          try {
+            await _fetchUserData(currentUser.uid);
+          } catch (e) {
+            // If user document not found but we have Firebase auth,
+            // consider them authenticated anyway
+            if (kDebugMode) {
+              debugPrint('Error fetching user data, but Firebase user exists: $e');
+            }
+          }
         }
         
         notifyListeners();
-        debugPrint('Auth state reloaded: Authenticated');
+        if (kDebugMode) {
+          debugPrint('Auth state reloaded: Authenticated');
+        }
       } else {
         _status = AuthStatus.unauthenticated;
         _firebaseUser = null;
         _user = null;
         notifyListeners();
-        debugPrint('Auth state reloaded: Unauthenticated');
+        if (kDebugMode) {
+          debugPrint('Auth state reloaded: Unauthenticated');
+        }
       }
     } catch (e) {
-      debugPrint('Error reloading auth state: $e');
+      if (kDebugMode) {
+        debugPrint('Error reloading auth state: $e');
+      }
     }
   }
+  
   /// Updates the user's business setup completion status
-Future<void> updateUserSetupStatus(bool hasCompleted) async {
-  try {
-    if (_user == null || _firebaseUser == null) {
-      throw Exception('No authenticated user found');
+  Future<void> updateUserSetupStatus(bool hasCompleted) async {
+    try {
+      if (_user == null || _firebaseUser == null) {
+        throw Exception('No authenticated user found');
+      }
+      
+      // Update local user model first
+      _user = _user!.copyWith(
+        hasCompletedSetup: hasCompleted,
+        updatedAt: DateTime.now(),
+      );
+      
+      // Update Firestore document
+      await _firestoreService.updateUser(_user!);
+      
+      if (kDebugMode) {
+        debugPrint('✅ User setup status updated: $hasCompleted');
+      }
+      notifyListeners();
+    } catch (e) {
+      _errorMessage = e.toString();
+      if (kDebugMode) {
+        debugPrint('❌ Error updating user setup status: $e');
+      }
+      throw Exception(_errorMessage);
     }
-    
-    // Update local user model first
-    _user = _user!.copyWith(
-      hasCompletedSetup: hasCompleted,
-      updatedAt: DateTime.now(),
-    );
-    
-    // Update Firestore document
-    await _firestoreService.updateUser(_user!);
-    
-    debugPrint('✅ User setup status updated: $hasCompleted');
-    notifyListeners();
-  } catch (e) {
-    _errorMessage = e.toString();
-    debugPrint('❌ Error updating user setup status: $e');
-    throw Exception(_errorMessage);
   }
-}
 }

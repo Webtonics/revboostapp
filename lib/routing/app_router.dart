@@ -117,49 +117,70 @@ class PlaceholderScreen extends StatelessWidget {
   }
 }
 
-/// Unified router configuration for the application
+/// Unified router configuration for the application - OPTIMIZED VERSION
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
   
-  // Flag to prevent redirect loops with a more robust implementation
+  // Improved redirect control with debounce
   static bool _isRedirecting = false;
   static DateTime _lastRedirectTime = DateTime.now().subtract(const Duration(seconds: 1));
+  
+  // Cache the last path to avoid redundant checks
+  static String? _lastCheckedPath;
+  static String? _lastRedirectResult;
+  
+  // Cache timestamps for critical reload operations
+  static DateTime? _lastUserReloadTime;
+  static DateTime? _lastSubscriptionCheckTime;
   
   /// Get the configured GoRouter instance
   static GoRouter get router {
     return GoRouter(
       navigatorKey: _rootNavigatorKey,
       initialLocation: AppRoutes.splash,
-      debugLogDiagnostics: true,
+      debugLogDiagnostics: kDebugMode, // Only enable in debug mode
       
-      /// Primary redirect logic to handle authentication and route protection
+      /// Optimized redirect logic with caching and minimal reloads
       redirect: (context, state) async {
-        // More robust redirect prevention mechanism
+        // More robust redirect prevention with caching
         final now = DateTime.now();
-        if (_isRedirecting && now.difference(_lastRedirectTime).inMilliseconds < 500) {
+        final currentPath = state.uri.path;
+        
+        // Quick return if we recently checked this exact path with the same result
+        if (currentPath == _lastCheckedPath && 
+            now.difference(_lastRedirectTime).inMilliseconds < 2000) {
+          debugPrint('🔄 Using cached redirect result for: $currentPath');
+          return _lastRedirectResult;
+        }
+        
+        // Prevent redirect loops with improved debounce
+        if (_isRedirecting && now.difference(_lastRedirectTime).inMilliseconds < 300) {
           debugPrint('❌ Skipping redirect - already in progress');
           return null;
         }
         
         _isRedirecting = true;
         _lastRedirectTime = now;
+        _lastCheckedPath = currentPath;
         String? redirectPath;
         
         try {
-          // Extract important data
+          // Extract providers without triggering rebuilds
           final authProvider = Provider.of<AuthProvider>(context, listen: false);
           final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
-          final currentPath = state.uri.path;
   
-          // Logging to help with debugging
-          _logRouteAttempt(currentPath, state.uri);
+          // Debug logging only in debug mode
+          if (kDebugMode) {
+            _logRouteAttempt(currentPath, state.uri);
+          }
           
-          // Skip redirect for these special cases
+          // Skip redirect for special cases
           if (_shouldSkipRedirect(authProvider, currentPath)) {
+            _lastRedirectResult = null;
             return null;
           }
           
-          // AUTHENTICATION CHECK
+          // AUTHENTICATION CHECK - Simplified
           final isAuthenticated = authProvider.status == AuthStatus.authenticated;
           final user = authProvider.user;
           final isPublicRoute = AppRoutes.publicRoutes.contains(currentPath) || 
@@ -167,81 +188,95 @@ class AppRouter {
           
           // Not logged in -> redirect to login unless on a public route
           if (!isAuthenticated) {
-            return isPublicRoute ? null : AppRoutes.login;
+            _lastRedirectResult = isPublicRoute ? null : AppRoutes.login;
+            return _lastRedirectResult;
           }
           
           // User is authenticated but on a public route (login, register, etc.)
-          // Redirect to appropriate next step
           if (isPublicRoute && currentPath != AppRoutes.splash) {
-            return AppRoutes.splash; // Redirect to splash which will handle further routing
+            _lastRedirectResult = AppRoutes.splash;
+            return _lastRedirectResult;
           }
           
-          // EMAIL VERIFICATION CHECK
-          // Always reload user data to get the most up-to-date verification status
-          await authProvider.reloadUser();
+          // EMAIL VERIFICATION CHECK - Only reload when necessary
+          final shouldReloadUser = _shouldReloadUser(currentPath);
+          if (shouldReloadUser) {
+            await authProvider.reloadUser();
+          }
+          
           final isEmailVerified = user?.emailVerified ?? false;
           
           // If on verification screen but already verified, move forward
           if (currentPath == AppRoutes.emailVerification && isEmailVerified) {
             redirectPath = await _determineNextPathInFlow(user!, context);
             debugPrint('⚡ Email already verified, moving to next flow step: $redirectPath');
+            _lastRedirectResult = redirectPath;
             return redirectPath;
           }
           
           // Enforce verification for protected routes
           if (!isEmailVerified && !AppRoutes.noVerificationRequiredRoutes.contains(currentPath)) {
             debugPrint('⚡ Redirecting to email verification: email not verified');
-            return AppRoutes.emailVerification;
+            _lastRedirectResult = AppRoutes.emailVerification;
+            return _lastRedirectResult;
           }
           
           // If on splash and authenticated, determine next appropriate screen
           if (currentPath == AppRoutes.splash) {
             redirectPath = await _determineNextPathInFlow(user!, context);
             debugPrint('⚡ Splash redirect decision: $redirectPath');
+            _lastRedirectResult = redirectPath;
             return redirectPath;
           }
           
-          // BUSINESS SETUP & ONBOARDING FLOW
-          // The user has completed business setup
+          // BUSINESS SETUP & ONBOARDING FLOW - Simplified
           final businessSetupCompleted = user?.hasCompletedSetup ?? false;
           
           // If business setup is not completed
           if (!businessSetupCompleted) {
-            // Only redirect to onboarding if not already on onboarding or business setup
             if (currentPath != AppRoutes.onboarding && currentPath != AppRoutes.businessSetup) {
               debugPrint('⚡ Redirecting to onboarding: business setup not completed');
-              return AppRoutes.onboarding;
+              _lastRedirectResult = AppRoutes.onboarding;
+              return _lastRedirectResult;
             }
           } else {
-            // If business setup is completed but user is on onboarding or business setup screens
             if (currentPath == AppRoutes.onboarding || currentPath == AppRoutes.businessSetup) {
               debugPrint('⚡ Business setup completed, redirecting to dashboard');
-              return AppRoutes.dashboard;
+              _lastRedirectResult = AppRoutes.dashboard;
+              return _lastRedirectResult;
             }
           }
           
-          // SUBSCRIPTION CHECK for premium routes
+          // SUBSCRIPTION CHECK - Only for premium routes and only when necessary
           if (AppRoutes.premiumRoutes.contains(currentPath)) {
-            // Force reload subscription status to avoid stale data
-            await subscriptionProvider.reloadSubscriptionStatus();
+            // Check if we need to reload subscription status
+            final shouldCheckSubscription = _shouldCheckSubscription();
+            
+            if (shouldCheckSubscription) {
+              await subscriptionProvider.reloadSubscriptionStatus();
+              _lastSubscriptionCheckTime = DateTime.now();
+            }
             
             final hasActiveSubscription = subscriptionProvider.isSubscribed;
             final isFreeTrial = subscriptionProvider.isFreeTrial;
             
             if (!hasActiveSubscription && !isFreeTrial) {
               debugPrint('Premium route access attempted without subscription: $currentPath');
-              return AppRoutes.subscription;
+              _lastRedirectResult = AppRoutes.subscription;
+              return _lastRedirectResult;
             }
           }
           
           // Allow access to the requested route if all checks pass
+          _lastRedirectResult = null;
           return null;
         } catch (e) {
           debugPrint('❌ Error in redirect logic: $e');
+          _lastRedirectResult = null;
           return null; // In case of error, don't redirect to avoid loops
         } finally {
-          // Reset the redirect flag with a slight delay to prevent immediate re-triggers
-          Future.delayed(const Duration(milliseconds: 300), () {
+          // Reset the redirect flag with a slight delay
+          Future.delayed(const Duration(milliseconds: 200), () {
             _isRedirecting = false;
           });
         }
@@ -337,6 +372,112 @@ class AppRouter {
             );
           },
         ),
+        
+        // MAIN APP ROUTES - Use shell route for shared layout
+        ShellRoute(
+          builder: (context, state, child) {
+            // Get title from the route or use a default
+            final path = state.uri.path;
+            String title = 'RevBoost';
+            
+            if (path.contains(AppRoutes.dashboard)) title = 'Dashboard';
+            else if (path.contains(AppRoutes.settings)) title = 'Settings';
+            else if (path.contains(AppRoutes.feedback)) title = 'Feedback';
+            else if (path.contains(AppRoutes.reviewRequests)) title = 'Review Requests';
+            else if (path.contains(AppRoutes.contacts)) title = 'Contacts';
+            else if (path.contains(AppRoutes.qrCode)) title = 'QR Code';
+            else if (path.contains(AppRoutes.templates)) title = 'Templates';
+            
+            // Skip the shell for certain paths that should have their own layout
+            if (path == AppRoutes.onboarding || 
+                path == AppRoutes.businessSetup ||
+                path == AppRoutes.subscription ||
+                path == AppRoutes.subscriptionSuccess ||
+                AppRoutes.isPublicReviewRoute(path)) {
+              return child;
+            }
+            
+            // Apply the common layout to main app routes
+            return AppLayout(
+              title: title,
+              child: child,
+            );
+          },
+          routes: [
+            GoRoute(
+              path: AppRoutes.dashboard,
+              pageBuilder: (context, state) => CustomTransitionPage(
+                key: state.pageKey,
+                child: const DashboardScreen(),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+              ),
+            ),
+            GoRoute(
+              path: AppRoutes.settings,
+              pageBuilder: (context, state) => CustomTransitionPage(
+                key: state.pageKey,
+                child: const SettingsScreen(),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+              ),
+            ),
+            GoRoute(
+              path: AppRoutes.feedback,
+              pageBuilder: (context, state) => CustomTransitionPage(
+                key: state.pageKey,
+                child: const BusinessFeedbackPage(),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+              ),
+            ),
+            GoRoute(
+              path: AppRoutes.reviewRequests,
+              pageBuilder: (context, state) => CustomTransitionPage(
+                key: state.pageKey,
+                child: const ReviewRequestsScreen(),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+              ),
+            ),
+            GoRoute(
+              path: AppRoutes.contacts,
+              pageBuilder: (context, state) => CustomTransitionPage(
+                key: state.pageKey,
+                child: const PlaceholderScreen(title: 'Contacts'),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+              ),
+            ),
+            GoRoute(
+              path: AppRoutes.qrCode,
+              pageBuilder: (context, state) => CustomTransitionPage(
+                key: state.pageKey,
+                child: const QrCodeScreen(),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+              ),
+            ),
+            GoRoute(
+              path: AppRoutes.templates,
+              pageBuilder: (context, state) => CustomTransitionPage(
+                key: state.pageKey,
+                child: const PlaceholderScreen(title: 'Templates'),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+              ),
+            ),
+          ],
+        ),
+        
+        // Non-Shell Routes (need their own layout)
         GoRoute(
           path: AppRoutes.resetPassword,
           builder: (context, state) {
@@ -359,47 +500,24 @@ class AppRouter {
           path: AppRoutes.businessSetup,
           builder: (context, state) => const BusinessSetupScreen(),
         ),
-        
-        // MAIN APPLICATION ROUTES
-        GoRoute(
-          path: AppRoutes.dashboard,
-          builder: (context, state) => const DashboardScreen(),
-        ),
-        GoRoute(
-          path: AppRoutes.settings,
-          builder: (context, state) => const SettingsScreen(),
-        ),
-        GoRoute(
-          path: AppRoutes.feedback,
-          builder: (context, state) => const BusinessFeedbackPage(),
-        ),
-        
-        // PREMIUM ROUTES
-        GoRoute(
-          path: AppRoutes.reviewRequests,
-          builder: (context, state) => const ReviewRequestsScreen(),
-        ),
-        GoRoute(
-          path: AppRoutes.contacts,
-          builder: (context, state) => const AppLayout(
-            title: "Contacts", 
-            child: PlaceholderScreen(title: 'Contacts')
-          ), 
-        ),
-        GoRoute(
-          path: AppRoutes.qrCode,
-          builder: (context, state) => const QrCodeScreen(),
-        ),
-        GoRoute(
-          path: AppRoutes.templates,
-          builder: (context, state) => const AppLayout(
-            title: "Templates", 
-            child: PlaceholderScreen(title: 'Templates')
-          ),
-        ),
         GoRoute(
           path: AppRoutes.subscription,
           builder: (context, state) => const SubscriptionScreen(),
+        ),
+        GoRoute(
+          path: AppRoutes.subscriptionSuccess,
+          builder: (context, state) {
+            String? planId;
+            
+            if (state.extra != null && state.extra is Map) {
+              final extras = state.extra as Map;
+              planId = extras['planId'] as String?;
+            }
+            
+            planId ??= state.uri.queryParameters['planId'];
+            
+            return SubscriptionSuccessScreen(planId: planId);
+          },
         ),
         
         // PUBLIC REVIEW PAGE
@@ -408,25 +526,6 @@ class AppRouter {
           builder: (context, state) {
             final businessId = state.pathParameters['businessId'] ?? '';
             return PublicReviewScreen(businessId: businessId);
-          },
-        ),
-
-        GoRoute(
-          path: AppRoutes.subscriptionSuccess,
-          builder: (context, state) {
-            // Extract planId from query parameters or route state's extras
-            String? planId;
-            
-            // Check if we have extras with planId
-            if (state.extra != null && state.extra is Map) {
-              final extras = state.extra as Map;
-              planId = extras['planId'] as String?;
-            }
-            
-            // If not in extras, try query params
-            planId ??= state.uri.queryParameters['planId'];
-            
-            return SubscriptionSuccessScreen(planId: planId);
           },
         ),
       ],
@@ -455,8 +554,7 @@ class AppRouter {
     );
   }
 
-  /// Determine the next appropriate route in the user flow based on 
-  /// verification and setup status
+  /// Determine the next appropriate route in the user flow - OPTIMIZED
   static Future<String> _determineNextPathInFlow(dynamic user, BuildContext context) async {
     // Check if business setup is completed
     final businessSetupCompleted = user.hasCompletedSetup ?? false;
@@ -490,6 +588,43 @@ class AppRouter {
     }
     
     return false;
+  }
+  
+  /// New method to determine if user reload is necessary
+  static bool _shouldReloadUser(String currentPath) {
+    // These paths definitely need fresh user data
+    final criticalPaths = [
+      AppRoutes.emailVerification,
+      AppRoutes.onboarding,
+      AppRoutes.businessSetup,
+    ];
+    
+    if (criticalPaths.contains(currentPath)) {
+      return true;
+    }
+    
+    // Avoid frequent reloads with a cooldown period
+    if (_lastUserReloadTime != null) {
+      final timeSinceLastReload = DateTime.now().difference(_lastUserReloadTime!);
+      // Only reload if it's been at least 30 seconds since last reload
+      if (timeSinceLastReload.inSeconds < 30) {
+        return false;
+      }
+    }
+    
+    // No recent reload, so a reload is needed
+    return true;
+  }
+  
+  /// New method to check if subscription status needs to be reloaded
+  static bool _shouldCheckSubscription() {
+    if (_lastSubscriptionCheckTime == null) {
+      return true; // First check
+    }
+    
+    final timeSinceLastCheck = DateTime.now().difference(_lastSubscriptionCheckTime!);
+    // Only check subscription if it's been at least 5 minutes
+    return timeSinceLastCheck.inMinutes >= 5;
   }
   
   /// Helper method to log route navigation attempts for debugging

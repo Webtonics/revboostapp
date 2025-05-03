@@ -291,25 +291,22 @@ void _showNewRequestDialog() {
 Widget build(BuildContext context) {
   final emailService = Provider.of<EmailService>(context, listen: false);
   
-  return AppLayout(
-    title: 'Review Requests',
-    child: _isLoading
-        ? const Center(child: CircularProgressIndicator())
-        : _errorMessage.isNotEmpty
-            ? _buildErrorView()
-            : _business == null
-                ? _buildNoBusiness()
-                : ChangeNotifierProvider<ReviewRequestProvider>(
-                    create: (_) => ReviewRequestProvider(
-                      emailService: emailService,
-                      businessId: _business!.id,
-                      businessName: _business!.name,
-                    ),
-                    child: Builder(
-                      builder: (context) => _buildReviewRequestsView(),
-                    ),
+  return _isLoading
+      ? const Center(child: CircularProgressIndicator())
+      : _errorMessage.isNotEmpty
+          ? _buildErrorView()
+          : _business == null
+              ? _buildNoBusiness()
+              : ChangeNotifierProvider<ReviewRequestProvider>(
+                  create: (_) => ReviewRequestProvider(
+                    emailService: emailService,
+                    businessId: _business!.id,
+                    businessName: _business!.name,
                   ),
-  );
+                  child: Builder(
+                    builder: (context) => _buildReviewRequestsView(),
+                  ),
+                );
 }
   
   Widget _buildErrorView() {

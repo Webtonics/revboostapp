@@ -47,16 +47,13 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
         
         return LoadingOverlay(
           isLoading: _isLoading || isLoading,
-          child: AppLayout(
-            title: 'Settings',
-            child: Column(
-              children: [
-                _buildTabBar(),
-                Expanded(
-                  child: _buildTabContent(settings),
-                ),
-              ],
-            ),
+          child: Column(
+            children: [
+              _buildTabBar(),
+              Expanded(
+                child: _buildTabContent(settings),
+              ),
+            ],
           ),
         );
       },

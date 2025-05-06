@@ -117,21 +117,13 @@ class PlaceholderScreen extends StatelessWidget {
   }
 }
 
-/// Unified router configuration for the application - OPTIMIZED VERSION
+/// Unified router configuration for the application - SIMPLIFIED VERSION
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
   
-  // Improved redirect control with debounce
+  // Improved redirect state management
   static bool _isRedirecting = false;
   static DateTime _lastRedirectTime = DateTime.now().subtract(const Duration(seconds: 1));
-  
-  // Cache the last path to avoid redundant checks
-  static String? _lastCheckedPath;
-  static String? _lastRedirectResult;
-  
-  // Cache timestamps for critical reload operations
-  static DateTime? _lastUserReloadTime;
-  static DateTime? _lastSubscriptionCheckTime;
   
   /// Get the configured GoRouter instance
   static GoRouter get router {
@@ -140,142 +132,100 @@ class AppRouter {
       initialLocation: AppRoutes.splash,
       debugLogDiagnostics: kDebugMode, // Only enable in debug mode
       
-      /// Optimized redirect logic with caching and minimal reloads
+      /// Minimalistic redirect logic that only handles essential flows
       redirect: (context, state) async {
-        // More robust redirect prevention with caching
-        final now = DateTime.now();
         final currentPath = state.uri.path;
+        final now = DateTime.now();
         
-        // Quick return if we recently checked this exact path with the same result
-        if (currentPath == _lastCheckedPath && 
-            now.difference(_lastRedirectTime).inMilliseconds < 2000) {
-          debugPrint('🔄 Using cached redirect result for: $currentPath');
-          return _lastRedirectResult;
-        }
-        
-        // Prevent redirect loops with improved debounce
+        // Skip redirect if already redirecting but only if very recent
         if (_isRedirecting && now.difference(_lastRedirectTime).inMilliseconds < 300) {
-          debugPrint('❌ Skipping redirect - already in progress');
           return null;
         }
         
         _isRedirecting = true;
         _lastRedirectTime = now;
-        _lastCheckedPath = currentPath;
-        String? redirectPath;
         
         try {
-          // Extract providers without triggering rebuilds
-          final authProvider = Provider.of<AuthProvider>(context, listen: false);
-          final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
-  
-          // Debug logging only in debug mode
-          if (kDebugMode) {
-            _logRouteAttempt(currentPath, state.uri);
-          }
+          // Get auth state
+          final authProvider = Provider.of<AuthProvider>(context, listen:false);
+          final isAuthenticated = authProvider.status == AuthStatus.authenticated;
+          final user = authProvider.user;
           
-          // Skip redirect for special cases
-          if (_shouldSkipRedirect(authProvider, currentPath)) {
-            _lastRedirectResult = null;
+          // Debug logging
+          debugPrint('Router check: path=$currentPath, authenticated=$isAuthenticated');
+          
+          // Skip all redirects for splash screen - let the splash handle navigation
+          if (currentPath == AppRoutes.splash) {
             return null;
           }
           
-          // AUTHENTICATION CHECK - Simplified
-          final isAuthenticated = authProvider.status == AuthStatus.authenticated;
-          final user = authProvider.user;
+          // Handle public routes
           final isPublicRoute = AppRoutes.publicRoutes.contains(currentPath) || 
                                AppRoutes.isPublicReviewRoute(currentPath);
           
-          // Not logged in -> redirect to login unless on a public route
+          // Skip redirects for public review pages
+          if (AppRoutes.isPublicReviewRoute(currentPath)) {
+            return null;
+          }
+          
+          // If not authenticated, redirect to login (unless on a public route)
           if (!isAuthenticated) {
-            _lastRedirectResult = isPublicRoute ? null : AppRoutes.login;
-            return _lastRedirectResult;
+            debugPrint('User not authenticated, redirecting to: ${isPublicRoute ? 'staying on public route' : AppRoutes.login}');
+            return isPublicRoute ? null : AppRoutes.login;
+          }
+
+          // Add this special case for sign-out from dashboard-related pages
+          if (!isAuthenticated && 
+              (currentPath.startsWith(AppRoutes.dashboard) || 
+              currentPath.startsWith(AppRoutes.settings) || 
+              currentPath == '/' || 
+              currentPath.contains('/dashboard'))) {
+            debugPrint('⚠️ Special case: User not authenticated on protected route - forcing login redirect');
+            return AppRoutes.login;
           }
           
-          // User is authenticated but on a public route (login, register, etc.)
+          // From here, user is authenticated
+          
+          // If on a public route (except splash), go to dashboard
           if (isPublicRoute && currentPath != AppRoutes.splash) {
-            _lastRedirectResult = AppRoutes.splash;
-            return _lastRedirectResult;
+            return AppRoutes.dashboard;
           }
           
-          // EMAIL VERIFICATION CHECK - Only reload when necessary
-          final shouldReloadUser = _shouldReloadUser(currentPath);
-          if (shouldReloadUser) {
-            await authProvider.reloadUser();
-          }
-          
+          // Email verification check
           final isEmailVerified = user?.emailVerified ?? false;
           
-          // If on verification screen but already verified, move forward
-          if (currentPath == AppRoutes.emailVerification && isEmailVerified) {
-            redirectPath = await _determineNextPathInFlow(user!, context);
-            debugPrint('⚡ Email already verified, moving to next flow step: $redirectPath');
-            _lastRedirectResult = redirectPath;
-            return redirectPath;
-          }
-          
-          // Enforce verification for protected routes
+          // Need email verification
           if (!isEmailVerified && !AppRoutes.noVerificationRequiredRoutes.contains(currentPath)) {
-            debugPrint('⚡ Redirecting to email verification: email not verified');
-            _lastRedirectResult = AppRoutes.emailVerification;
-            return _lastRedirectResult;
+            return AppRoutes.emailVerification;
           }
           
-          // If on splash and authenticated, determine next appropriate screen
-          if (currentPath == AppRoutes.splash) {
-            redirectPath = await _determineNextPathInFlow(user!, context);
-            debugPrint('⚡ Splash redirect decision: $redirectPath');
-            _lastRedirectResult = redirectPath;
-            return redirectPath;
-          }
-          
-          // BUSINESS SETUP & ONBOARDING FLOW - Simplified
+          // Business setup check
           final businessSetupCompleted = user?.hasCompletedSetup ?? false;
           
-          // If business setup is not completed
           if (!businessSetupCompleted) {
             if (currentPath != AppRoutes.onboarding && currentPath != AppRoutes.businessSetup) {
-              debugPrint('⚡ Redirecting to onboarding: business setup not completed');
-              _lastRedirectResult = AppRoutes.onboarding;
-              return _lastRedirectResult;
-            }
-          } else {
-            if (currentPath == AppRoutes.onboarding || currentPath == AppRoutes.businessSetup) {
-              debugPrint('⚡ Business setup completed, redirecting to dashboard');
-              _lastRedirectResult = AppRoutes.dashboard;
-              return _lastRedirectResult;
+              return AppRoutes.onboarding;
             }
           }
           
-          // SUBSCRIPTION CHECK - Only for premium routes and only when necessary
+          // Subscription check (only for premium routes)
           if (AppRoutes.premiumRoutes.contains(currentPath)) {
-            // Check if we need to reload subscription status
-            final shouldCheckSubscription = _shouldCheckSubscription();
-            
-            if (shouldCheckSubscription) {
-              await subscriptionProvider.reloadSubscriptionStatus();
-              _lastSubscriptionCheckTime = DateTime.now();
-            }
-            
+            final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
             final hasActiveSubscription = subscriptionProvider.isSubscribed;
             final isFreeTrial = subscriptionProvider.isFreeTrial;
             
             if (!hasActiveSubscription && !isFreeTrial) {
-              debugPrint('Premium route access attempted without subscription: $currentPath');
-              _lastRedirectResult = AppRoutes.subscription;
-              return _lastRedirectResult;
+              return AppRoutes.subscription;
             }
           }
           
-          // Allow access to the requested route if all checks pass
-          _lastRedirectResult = null;
+          // Allow the navigation
           return null;
         } catch (e) {
-          debugPrint('❌ Error in redirect logic: $e');
-          _lastRedirectResult = null;
-          return null; // In case of error, don't redirect to avoid loops
+          debugPrint('Router error: $e');
+          return null;
         } finally {
-          // Reset the redirect flag with a slight delay
+          // Reset redirecting flag with a slight delay
           Future.delayed(const Duration(milliseconds: 200), () {
             _isRedirecting = false;
           });
@@ -552,84 +502,6 @@ class AppRouter {
         );
       },
     );
-  }
-
-  /// Determine the next appropriate route in the user flow - OPTIMIZED
-  static Future<String> _determineNextPathInFlow(dynamic user, BuildContext context) async {
-    // Check if business setup is completed
-    final businessSetupCompleted = user.hasCompletedSetup ?? false;
-    
-    // Email verification check
-    if (!(user.emailVerified ?? false)) {
-      return AppRoutes.emailVerification;
-    }
-    
-    // After email verification, check business setup status
-    if (!businessSetupCompleted) {
-      return AppRoutes.onboarding;
-    }
-    
-    // All steps completed, go to dashboard
-    return AppRoutes.dashboard;
-  }
-
-  /// Check if we should skip the redirect logic for certain routes
-  static bool _shouldSkipRedirect(AuthProvider authProvider, String currentPath) {
-    // Skip if auth is loading
-    if (authProvider.status == AuthStatus.loading || 
-        authProvider.status == AuthStatus.initial) {
-      return true;
-    }
-    
-    // Skip for public review pages
-    if (AppRoutes.isPublicReviewRoute(currentPath)) {
-      debugPrint('Public review route - skipping auth checks');
-      return true;
-    }
-    
-    return false;
-  }
-  
-  /// New method to determine if user reload is necessary
-  static bool _shouldReloadUser(String currentPath) {
-    // These paths definitely need fresh user data
-    final criticalPaths = [
-      AppRoutes.emailVerification,
-      AppRoutes.onboarding,
-      AppRoutes.businessSetup,
-    ];
-    
-    if (criticalPaths.contains(currentPath)) {
-      return true;
-    }
-    
-    // Avoid frequent reloads with a cooldown period
-    if (_lastUserReloadTime != null) {
-      final timeSinceLastReload = DateTime.now().difference(_lastUserReloadTime!);
-      // Only reload if it's been at least 30 seconds since last reload
-      if (timeSinceLastReload.inSeconds < 30) {
-        return false;
-      }
-    }
-    
-    // No recent reload, so a reload is needed
-    return true;
-  }
-  
-  /// New method to check if subscription status needs to be reloaded
-  static bool _shouldCheckSubscription() {
-    if (_lastSubscriptionCheckTime == null) {
-      return true; // First check
-    }
-    
-    final timeSinceLastCheck = DateTime.now().difference(_lastSubscriptionCheckTime!);
-    // Only check subscription if it's been at least 5 minutes
-    return timeSinceLastCheck.inMinutes >= 5;
-  }
-  
-  /// Helper method to log route navigation attempts for debugging
-  static void _logRouteAttempt(String path, Uri uri) {
-    debugPrint('⚡ Route requested: $path (${uri.toString()})');
   }
   
   /// Helper method for string minimum length

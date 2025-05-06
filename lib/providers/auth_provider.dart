@@ -1,4 +1,4 @@
-// lib/providers/auth_provider.dart
+// lib/providers/auth_provider.dart - Updated with improved error handling
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -16,6 +16,7 @@ class AuthProvider with ChangeNotifier {
   User? _firebaseUser;
   UserModel? _user;
   String? _errorMessage;
+  String? _errorCode; // Added to store error codes
   
   // Performance optimization: Tracking timestamps for caching and debouncing
   DateTime? _lastUserReloadTime;
@@ -27,6 +28,7 @@ class AuthProvider with ChangeNotifier {
   User? get firebaseUser => _firebaseUser;
   UserModel? get user => _user;
   String? get errorMessage => _errorMessage;
+  String? get errorCode => _errorCode; // Getter for error code
   bool get isAuthenticated => _status == AuthStatus.authenticated;
   
   // Constructor without direct Firebase access
@@ -60,6 +62,9 @@ class AuthProvider with ChangeNotifier {
             // Try to get the user document with optimized fetching
             await _fetchUserData(user.uid);
             _status = AuthStatus.authenticated;
+            // Clear any existing error messages on successful authentication
+            _errorMessage = null;
+            _errorCode = null;
             if (kDebugMode) {
               debugPrint('AuthStatus set to: authenticated');
             }
@@ -82,12 +87,15 @@ class AuthProvider with ChangeNotifier {
               await _firestoreService.createUser(newUser);
               _user = newUser;
               _status = AuthStatus.authenticated;
+              // Clear any existing error messages
+              _errorMessage = null;
+              _errorCode = null;
               if (kDebugMode) {
                 debugPrint('Created new user document and authenticated');
               }
             } catch (createError) {
               _status = AuthStatus.error;
-              _errorMessage = 'Failed to create user profile: $createError';
+              _handleError(createError, 'Failed to create user profile: ');
               if (kDebugMode) {
                 debugPrint('Failed to create user document: $createError');
               }
@@ -99,11 +107,94 @@ class AuthProvider with ChangeNotifier {
       });
     } catch (e) {
       _status = AuthStatus.error;
-      _errorMessage = e.toString();
+      _handleError(e);
       if (kDebugMode) {
         debugPrint('Error in auth initialization: $e');
       }
       notifyListeners();
+    }
+  }
+  
+  // NEW: Improved error handling method
+  void _handleError(dynamic error, [String prefix = '']) {
+    _errorCode = _extractErrorCode(error);
+    _errorMessage = _getUserFriendlyErrorMessage(_errorCode);
+    
+    if (_errorMessage == null) {
+      // If we don't have a user-friendly message, use the raw error
+      _errorMessage = prefix + error.toString();
+    } else if (prefix.isNotEmpty) {
+      _errorMessage = prefix + _errorMessage!;
+    }
+  }
+  
+  // NEW: Extract Firebase error code from exception
+  String? _extractErrorCode(dynamic error) {
+    if (error is FirebaseAuthException) {
+      return error.code;
+    } else if (error is String && error.contains('firebase_auth/')) {
+      // Extract code from error string like [firebase_auth/invalid-email]
+      final RegExp regExp = RegExp(r'firebase_auth\/([\w-]+)');
+      final match = regExp.firstMatch(error);
+      if (match != null && match.groupCount >= 1) {
+        return match.group(1);
+      }
+    }
+    return null;
+  }
+  
+  // NEW: Get user-friendly error messages based on Firebase error codes
+  String? _getUserFriendlyErrorMessage(String? errorCode) {
+    if (errorCode == null) return null;
+    
+    switch (errorCode) {
+      // Sign in errors
+      case 'invalid-email':
+        return 'Please enter a valid email address';
+      case 'user-disabled':
+        return 'This account has been disabled. Please contact support';
+      case 'user-not-found':
+        return 'No account found with this email. Please check or create a new account';
+      case 'wrong-password':
+        return 'Incorrect password. Please try again or reset your password';
+      case 'invalid-credential':
+        return 'Invalid login credentials. Please check your email and password';
+      case 'invalid-verification-code':
+        return 'Invalid verification code';
+      case 'invalid-verification-id':
+        return 'Invalid verification ID';
+        
+      // Sign up errors
+      case 'email-already-in-use':
+        return 'An account already exists with this email address';
+      case 'operation-not-allowed':
+        return 'This operation is not allowed. Please contact support';
+      case 'weak-password':
+        return 'Your password is too weak. Please use a stronger password';
+        
+      // Reset password errors
+      case 'missing-email':
+        return 'Please provide an email address';
+      case 'expired-action-code':
+        return 'The password reset link has expired. Please request a new one';
+      case 'invalid-action-code':
+        return 'The password reset link is invalid. Please request a new one';
+        
+      // General network errors
+      case 'network-request-failed':
+        return 'Network error. Please check your internet connection and try again';
+      case 'too-many-requests':
+        return 'Too many unsuccessful attempts. Please try again later';
+      case 'operation-not-supported-in-this-environment':
+        return 'This operation is not supported in your current environment';
+        
+      // Timeout errors
+      case 'timeout':
+        return 'Request timeout. Please check your internet connection and try again';
+        
+      // Default case for unknown errors
+      default:
+        return null;
     }
   }
     
@@ -190,11 +281,27 @@ class AuthProvider with ChangeNotifier {
     try {
       _status = AuthStatus.loading;
       _errorMessage = null;
+      _errorCode = null;
       notifyListeners();
       
       // Log authentication attempt
       if (kDebugMode) {
         debugPrint('Attempting to sign in with email: $email');
+      }
+      
+      // Validate input before attempting to sign in
+      if (email.isEmpty) {
+        _status = AuthStatus.error;
+        _errorMessage = 'Please enter your email address';
+        notifyListeners();
+        throw Exception(_errorMessage);
+      }
+      
+      if (password.isEmpty) {
+        _status = AuthStatus.error;
+        _errorMessage = 'Please enter your password';
+        notifyListeners();
+        throw Exception(_errorMessage);
       }
       
       // Authenticate with Firebase
@@ -215,6 +322,9 @@ class AuthProvider with ChangeNotifier {
           // Try to fetch user data
           await _fetchUserData(user.uid);
           _status = AuthStatus.authenticated;
+          // Clear any error messages on success
+          _errorMessage = null;
+          _errorCode = null;
         } catch (e) {
           // Create user document if not found
           if (kDebugMode) {
@@ -234,6 +344,9 @@ class AuthProvider with ChangeNotifier {
           await _firestoreService.createUser(newUser);
           _user = newUser;
           _status = AuthStatus.authenticated;
+          // Clear any error messages on success
+          _errorMessage = null;
+          _errorCode = null;
         }
         
         notifyListeners();
@@ -242,7 +355,7 @@ class AuthProvider with ChangeNotifier {
       }
     } catch (e) {
       _status = AuthStatus.error;
-      _errorMessage = e.toString();
+      _handleError(e);
       notifyListeners();
       if (kDebugMode) {
         debugPrint('Sign in error: $e');
@@ -255,7 +368,30 @@ class AuthProvider with ChangeNotifier {
     try {
       _status = AuthStatus.loading;
       _errorMessage = null;
+      _errorCode = null;
       notifyListeners();
+      
+      // Validate input
+      if (email.isEmpty) {
+        _status = AuthStatus.error;
+        _errorMessage = 'Please enter your email address';
+        notifyListeners();
+        throw Exception(_errorMessage);
+      }
+      
+      if (password.isEmpty) {
+        _status = AuthStatus.error;
+        _errorMessage = 'Please enter a password';
+        notifyListeners();
+        throw Exception(_errorMessage);
+      }
+      
+      if (displayName.isEmpty) {
+        _status = AuthStatus.error;
+        _errorMessage = 'Please enter your name';
+        notifyListeners();
+        throw Exception(_errorMessage);
+      }
       
       final userCredential = await _authService.createUserWithEmailAndPassword(email, password);
       
@@ -280,11 +416,15 @@ class AuthProvider with ChangeNotifier {
         
         await _firestoreService.createUser(newUser);
         
+        // Clear any error messages on success
+        _errorMessage = null;
+        _errorCode = null;
+        
         // Auth state changes listener will handle updating the status
       }
     } catch (e) {
       _status = AuthStatus.error;
-      _errorMessage = _authService.getReadableAuthError(e);
+      _handleError(e);
       notifyListeners();
       throw Exception(_errorMessage);
     }
@@ -295,12 +435,15 @@ class AuthProvider with ChangeNotifier {
       // Reset cached data on signout
       _lastUserReloadTime = null;
       _lastUserFetchTime = null;
+      _errorMessage = null;
+      _errorCode = null;
       
       await _authService.signOut();
       // Auth state changes listener will handle updating the status
+      notifyListeners();
     } catch (e) {
       _status = AuthStatus.error;
-      _errorMessage = e.toString();
+      _handleError(e);
       notifyListeners();
       throw Exception(_errorMessage);
     }
@@ -308,13 +451,67 @@ class AuthProvider with ChangeNotifier {
   
   Future<void> resetPassword(String email) async {
     try {
+      // Validate input
+      if (email.isEmpty) {
+        throw Exception('Please enter your email address');
+      }
+      
       await _authService.sendPasswordResetEmail(email);
     } catch (e) {
-      throw Exception(_authService.getReadableAuthError(e));
+      _handleError(e);
+      throw Exception(_errorMessage);
     }
   }
   
-  Future<void> updateProfile({String? displayName, String? photoUrl}) async {
+  // Future<void> updateProfile({String? displayName, String? photoUrl}) async {
+  //   try {
+  //     if (_user == null) return;
+      
+  //     // Update Firebase Auth profile
+  //     await _authService.updateUserProfile(
+  //       displayName: displayName,
+  //       photoURL: photoUrl,
+  //     );
+      
+  //     // Update Firestore user document
+  //     final updatedUser = _user!.copyWith(
+  //       displayName: displayName,
+  //       photoUrl: photoUrl,
+  //       updatedAt: DateTime.now(),
+  //     );
+      
+  //     await _firestoreService.updateUser(updatedUser);
+      
+  //     // Update local user model
+  //     _user = updatedUser;
+  //     notifyListeners();
+  //   } catch (e) {
+  //     _errorMessage = e.toString();
+  //     notifyListeners();
+  //     throw Exception(_errorMessage);
+  //   }
+  // }
+  
+  // // OPTIMIZED: Email verification with improved error handling
+  // Future<void> sendEmailVerification() async {
+  //   try {
+  //     if (_firebaseUser == null) {
+  //       throw Exception('No authenticated user found');
+  //     }
+      
+  //     await _firebaseUser!.sendEmailVerification();
+  //     if (kDebugMode) {
+  //       debugPrint('Verification email sent to: ${_firebaseUser!.email}');
+  //     }
+  //   } catch (e) {
+  //     _errorMessage = e.toString();
+  //     if (kDebugMode) {
+  //       debugPrint('Error sending verification email: $e');
+  //     }
+  //     throw Exception(_errorMessage);
+  //   }
+  // }
+   Future<void> updateProfile({String? displayName, String? photoUrl}) async {
     try {
       if (_user == null) return;
       
@@ -335,15 +532,16 @@ class AuthProvider with ChangeNotifier {
       
       // Update local user model
       _user = updatedUser;
+      _errorMessage = null;
+      _errorCode = null;
       notifyListeners();
     } catch (e) {
-      _errorMessage = e.toString();
+      _handleError(e);
       notifyListeners();
       throw Exception(_errorMessage);
     }
   }
   
-  // OPTIMIZED: Email verification with improved error handling
   Future<void> sendEmailVerification() async {
     try {
       if (_firebaseUser == null) {
@@ -355,14 +553,13 @@ class AuthProvider with ChangeNotifier {
         debugPrint('Verification email sent to: ${_firebaseUser!.email}');
       }
     } catch (e) {
-      _errorMessage = e.toString();
+      _handleError(e);
       if (kDebugMode) {
         debugPrint('Error sending verification email: $e');
       }
       throw Exception(_errorMessage);
     }
   }
-  
   // OPTIMIZED: User reload with debounce and caching
   Future<void> reloadUser() async {
     // Prevent concurrent reloads

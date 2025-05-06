@@ -614,7 +614,7 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
         child: InkWell(
           onTap: () {
             Provider.of<AuthProvider>(context, listen: false).signOut();
-            context.go(AppRoutes.login);
+            context.go(AppRoutes.splash);
           },
           child: const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -758,7 +758,7 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
             value: 'logout',
             onTap: () {
               Provider.of<AuthProvider>(context, listen: false).signOut();
-              context.go(AppRoutes.login);
+              context.go(AppRoutes.splash);
             },
             child: Row(
               children: [

@@ -46,7 +46,7 @@
     });
   </script>
   
-  <!-- Simplified splash screen styles -->
+  <!-- Professional splash screen styles -->
   <style id="splash-screen-style">
     html, body {
       margin: 0;
@@ -57,7 +57,7 @@
     }
     
     body {
-      background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%);
+      background-color: #FFFFFF;
     }
     
     #splash-container {
@@ -71,6 +71,8 @@
       justify-content: center;
       align-items: center;
       z-index: 9999;
+      /* Professional solid background instead of gradient */
+      background-color: #FFFFFF;
       transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
     }
     
@@ -78,7 +80,8 @@
       position: relative;
       width: 160px;
       height: 160px;
-      animation: pulse 2s infinite ease-in-out;
+      /* Subtle animation */
+      animation: subtle-pulse 3s infinite ease-in-out;
     }
     
     .logo {
@@ -94,34 +97,50 @@
       align-items: center;
     }
     
-    .dot {
-      width: 10px;
-      height: 10px;
-      margin: 0 5px;
-      border-radius: 50%;
-      background-color: white;
-      opacity: 0.8;
+    .version-info {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #555555;
+      text-align: center;
     }
     
-    .dot-1 { animation: bounce 1.4s infinite 0.2s; }
-    .dot-2 { animation: bounce 1.4s infinite 0.4s; }
-    .dot-3 { animation: bounce 1.4s infinite 0.6s; }
+    .company-info {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #777777;
+    }
     
-    @keyframes pulse {
+    /* More professional loading animation */
+    .loading-bar {
+      width: 100px;
+      height: 3px;
+      background-color: #EEEEEE;
+      border-radius: 3px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .loading-bar::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 30%;
+      background-color: #3B82F6;
+      animation: loading-progress 1.5s infinite ease-in-out;
+      border-radius: 3px;
+    }
+    
+    @keyframes subtle-pulse {
       0% { transform: scale(1); }
-      50% { transform: scale(1.05); }
+      50% { transform: scale(1.03); }
       100% { transform: scale(1); }
     }
     
-    @keyframes bounce {
-      0%, 80%, 100% { transform: translateY(0); }
-      40% { transform: translateY(-10px); }
-    }
-    
-    @media (prefers-color-scheme: light) {
-      body {
-        background: linear-gradient(135deg, #E0F2FE 0%, #2563EB 100%);
-      }
+    @keyframes loading-progress {
+      0% { left: -30%; }
+      100% { left: 100%; }
     }
     
     .hidden {
@@ -130,23 +149,40 @@
     }
   </style>
   
-  <!-- Simplified splash screen management script -->
+  <!-- Enhanced splash screen management script to prevent white screen -->
   <script id="splash-screen-script">
     // Track loading state
     let flutterReady = false;
-    const minDisplayTime = 1500; // Shorter minimum time to show splash (ms)
+    let flutterWarmupComplete = false;
+    const minDisplayTime = 2000; // Minimum time to show splash (ms)
+    const maxDisplayTime = 8000; // Maximum time to wait (ms)
     const splashStartTime = Date.now();
     
-    // Function called by Flutter when it's ready
+    // Function called by Flutter when it's initially ready
     function removeSplashFromWeb() {
       flutterReady = true;
-      
+      checkRemoveSplash();
+    }
+    
+    // The Flutter engine will call this when it's fully initialized and painted first frame
+    window.flutterWarmupComplete = function() {
+      flutterWarmupComplete = true;
+      checkRemoveSplash();
+    };
+    
+    // Check if we can remove the splash screen
+    function checkRemoveSplash() {
       // Calculate how long the splash has been shown
       const elapsedTime = Date.now() - splashStartTime;
-      const timeToWait = Math.max(0, minDisplayTime - elapsedTime);
       
-      // Remove splash after ensuring minimum display time
-      setTimeout(removeSplash, timeToWait);
+      // Only remove splash when Flutter is ready, has painted first frame, AND minimum display time is met
+      if (flutterReady && flutterWarmupComplete && elapsedTime >= minDisplayTime) {
+        removeSplash();
+      } else if (flutterReady && !flutterWarmupComplete) {
+        // If Flutter is ready but hasn't painted first frame, wait a bit longer
+        const timeToWait = Math.max(0, minDisplayTime - elapsedTime);
+        setTimeout(checkRemoveSplash, timeToWait);
+      }
     }
     
     // Function to remove splash
@@ -155,34 +191,72 @@
       if (splash) {
         splash.classList.add('hidden');
         setTimeout(function() {
-          // Completely remove from DOM after transition finishes
+          // Only remove from DOM after transition finishes and Flutter app is visible
           splash.remove();
-          document.body.style.background = "transparent";
         }, 600);
       }
     }
     
-    // Failsafe - remove splash after maximum wait time (5 seconds) 
-    setTimeout(removeSplash, 5000);
+    // Inject Flutter initialization hook
+    window.addEventListener('load', function() {
+      // This helps ensure the Flutter app is initialized before removing splash
+      if (window.flutter_inappwebview) {
+        window.flutter_inappwebview.callHandler('flutterInitialized', function() {
+          window.flutterWarmupComplete();
+        });
+      }
+    });
     
-    // Main listener for Flutter initialization
+    // Failsafe - remove splash after maximum wait time
+    setTimeout(function() {
+      if (!flutterWarmupComplete) {
+        console.warn('Flutter warmup timed out - removing splash anyway');
+        flutterWarmupComplete = true;
+        checkRemoveSplash();
+      }
+    }, maxDisplayTime);
+    
+    // Listen for Flutter initialization
     window.addEventListener('flutter-first-frame', removeSplashFromWeb);
   </script>
 </head>
 <body>
-  <!-- Simplified splash screen with just logo and dots -->
+  <!-- Enhanced splash screen with version and company info -->
   <div id="splash-container">
     <div class="logo-container">
       <img class="logo" src="splash_logo_light.png" alt="RevBoostApp">
     </div>
     <div class="loading-indicator">
-      <div class="dot dot-1"></div>
-      <div class="dot dot-2"></div>
-      <div class="dot dot-3"></div>
+      <div class="loading-bar"></div>
+    </div>
+    <div class="version-info">
+      Version 1.0
+      <div class="company-info">by Webtonics</div>
     </div>
   </div>
 
-  <!-- Flutter bootstrap script -->
-  <script src="flutter_bootstrap.js" async></script>
+  <!-- Flutter bootstrap script with additional initialization detection -->
+  <script>
+    // Create a global Flutter object if it doesn't exist
+    window.flutter = window.flutter || {};
+    window.flutter.loader = window.flutter.loader || {};
+    
+    // Add a callback to detect when Flutter has actually rendered content
+    const originalInitialize = window.flutter.loader.didCreateEngineInitializer;
+    window.flutter.loader.didCreateEngineInitializer = function(engineInitializer) {
+      if (originalInitialize) {
+        originalInitialize(engineInitializer);
+      }
+      
+      // Wait for first frame to be rendered
+      setTimeout(function() {
+        if (typeof window.flutterWarmupComplete === 'function') {
+          window.flutterWarmupComplete();
+        }
+      }, 1000); // Give it a second after initialization
+    };
+  </script>
+  
+  <script src="flutter_bootstrap.js" defer></script>
 </body>
 </html>

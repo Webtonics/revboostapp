@@ -155,19 +155,49 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     }
   }
 
+  // void _navigateAfterVerification() {
+  //   if (!mounted || _navigationInProgress) return;
+    
+  //   _navigationInProgress = true;
+    
+  //   // Ensure we give the UI time to update before navigating
+  //   Future.delayed(const Duration(milliseconds: 1500), () {
+  //     if (mounted) {
+  //       // Always use Splash as the target - the router will redirect appropriately
+  //       context.go(AppRoutes.splash);
+  //     }
+  //   });
+  // }
   void _navigateAfterVerification() {
-    if (!mounted || _navigationInProgress) return;
-    
-    _navigationInProgress = true;
-    
-    // Ensure we give the UI time to update before navigating
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (mounted) {
-        // Always use Splash as the target - the router will redirect appropriately
+  if (!mounted || _navigationInProgress) return;
+  
+  _navigationInProgress = true;
+  
+  // Ensure we give the UI time to update before navigating
+  Future.delayed(const Duration(milliseconds: 1500), () {
+    if (mounted) {
+      // Check if user has completed setup
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final user = authProvider.user;
+      
+      if (user != null) {
+        // Check if business setup is completed
+        final hasCompletedSetup = user.hasCompletedSetup ?? false;
+        
+        if (hasCompletedSetup) {
+          // If setup is complete, go to dashboard
+          context.go(AppRoutes.dashboard);
+        } else {
+          // If setup is not complete, go to onboarding
+          context.go(AppRoutes.onboarding);
+        }
+      } else {
+        // If no user is found (rare case), go to splash to handle redirection
         context.go(AppRoutes.splash);
       }
-    });
-  }
+    }
+  });
+}
 
   Future<void> _sendVerificationEmail() async {
     if (_isResendingEmail) return;
@@ -299,12 +329,31 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
+                // ElevatedButton(
+                //   onPressed: _navigationInProgress 
+                //     ? null
+                //     : () {
+                //         _navigationInProgress = true;
+                //         context.go(AppRoutes.splash); 
+                //       },
+                //   style: ElevatedButton.styleFrom(
+                //     minimumSize: const Size(double.infinity, 50),
+                //   ),
+                //   child: _navigationInProgress
+                //     ? const SizedBox(
+                //         height: 20,
+                //         width: 20,
+                //         child: CircularProgressIndicator(strokeWidth: 2),
+                //       )
+                //     : const Text('Continue'),
+                // ),
                 ElevatedButton(
                   onPressed: _navigationInProgress 
                     ? null
                     : () {
                         _navigationInProgress = true;
-                        context.go(AppRoutes.splash); 
+                        // Call your navigation method instead of going to splash
+                        _navigateAfterVerification();
                       },
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size(double.infinity, 50),

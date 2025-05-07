@@ -352,6 +352,7 @@ Future<void> _completeSetup() async {
     // Detect screen size for responsive layout
     final size = MediaQuery.of(context).size;
     final isSmallScreen = size.width < 600;
+    final isTabScreen = size.width < 600;
     final isPortrait = size.height > size.width;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
@@ -401,6 +402,7 @@ Future<void> _completeSetup() async {
           ],
         ),
         body: Container(
+          padding: EdgeInsets.symmetric( horizontal: isSmallScreen? 10: 300, vertical: 40),
           // Add a subtle gradient background for polish
           decoration: BoxDecoration(
             gradient: LinearGradient(

@@ -58,6 +58,8 @@ class _LoginScreenState extends State<LoginScreen> {
 //   }
 // }
 // In LoginScreen's _handleLogin method
+// In your login screen's _handleLogin method:
+
 Future<void> _handleLogin() async {
   if (!_formKey.currentState!.validate()) {
     return;
@@ -84,7 +86,7 @@ Future<void> _handleLogin() async {
         AppRouter.setJustLoggedIn();
         debugPrint('Login successful - marked user as just logged in');
         
-        // Force navigation when authenticated (router will handle redirection)
+        // Navigate to dashboard - router will handle redirection to verification if needed
         context.go(AppRoutes.dashboard);
       } else {
         setState(() {

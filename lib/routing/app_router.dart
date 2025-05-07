@@ -149,6 +149,7 @@ class AppRouter {
   // Track if we're coming from login (to force email verification check)
   static bool _isJustLoggedIn = false;
   
+  
   // Track subscription status check to avoid redirect loops
   static Map<String, bool> _subscriptionCheckCache = {};
   

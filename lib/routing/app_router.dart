@@ -78,9 +78,27 @@ class AppRoutes {
     templates,
   ];
   
+  // Routes that require completed business setup
+  static final List<String> setupRequiredRoutes = [
+    dashboard,
+    settings,
+    feedback,
+    reviewRequests,
+    contacts,
+    qrCode,
+    templates,
+    subscription,
+    subscriptionSuccess,
+  ];
+  
   // Returns true if the route starts with a path segment that matches a public review page
   static bool isPublicReviewRoute(String path) {
     return path.startsWith('/r/');
+  }
+  
+  // Helper to determine if a path is part of the dashboard or its subroutes
+  static bool isDashboardRoute(String path) {
+    return path == dashboard || path.startsWith('$dashboard/');
   }
 }
 
@@ -128,8 +146,17 @@ class AppRouter {
   // Track if we're coming from registration flow to prevent premature dashboard redirection
   static bool _isAfterRegistration = false;
   
+  // Track if we're coming from login (to force email verification check)
+  static bool _isJustLoggedIn = false;
+  
   // Track subscription status check to avoid redirect loops
   static Map<String, bool> _subscriptionCheckCache = {};
+  
+  // Mark a user as just logged in
+  static void setJustLoggedIn() {
+    _isJustLoggedIn = true;
+    debugPrint('✅ User just logged in, will enforce email verification check');
+  }
   
   /// Get the configured GoRouter instance
   static GoRouter get router {
@@ -164,7 +191,7 @@ class AppRouter {
           final user = authProvider.user;
           
           // Debug logging
-          debugPrint('Router check: path=$currentPath, authenticated=$isAuthenticated');
+          debugPrint('Router check: path=$currentPath, authenticated=$isAuthenticated, justLoggedIn=$_isJustLoggedIn');
           
           // Skip all redirects for splash screen - let the splash handle navigation
           if (currentPath == AppRoutes.splash) {
@@ -184,64 +211,68 @@ class AppRouter {
           if (!isAuthenticated) {
             debugPrint('User not authenticated, redirecting to: ${isPublicRoute ? 'staying on public route' : AppRoutes.login}');
             
-            // Reset registration flow tracking when logging out
+            // Reset tracking flags when logging out
             _isAfterRegistration = false;
+            _isJustLoggedIn = false;
             
             return isPublicRoute ? null : AppRoutes.login;
           }
-
-          // Add this special case for sign-out from dashboard-related pages
-          if (!isAuthenticated && 
-              (currentPath.startsWith(AppRoutes.dashboard) || 
-              currentPath.startsWith(AppRoutes.settings) || 
-              currentPath == '/' || 
-              currentPath.contains('/dashboard'))) {
-            debugPrint('⚠️ Special case: User not authenticated on protected route - forcing login redirect');
-            return AppRoutes.login;
-          }
           
-          // From here, user is authenticated
-          
-          // If on login or register page, redirect appropriately based on setup status
-          if (currentPath == AppRoutes.login || currentPath == AppRoutes.register) {
-            // Check if user just registered (this flag is set in the RegisterScreen)
-            if (_isAfterRegistration) {
-              debugPrint('User just registered, directing to onboarding flow');
-              _isAfterRegistration = false; // Reset the flag
-              return AppRoutes.onboarding;
-            }
-            
-            // For normal login, check setup status
-            final businessSetupCompleted = user?.hasCompletedSetup ?? false;
-            
-            if (!businessSetupCompleted) {
-              debugPrint('User logged in but needs to complete setup, directing to onboarding');
-              return AppRoutes.onboarding;
-            }
-            
-            debugPrint('User logged in with completed setup, directing to dashboard');
-            return AppRoutes.dashboard;
-          }
-          
-          // Email verification check
+          // ✅ CRITICAL FIX: Top priority check for email verification right after login
           final isEmailVerified = user?.emailVerified ?? false;
           
-          // Need email verification
+          // If user just logged in, immediately check email verification
+          if (_isJustLoggedIn) {
+            _isJustLoggedIn = false; // Reset the flag
+            
+            // Force check for email verification after login
+            if (!isEmailVerified) {
+              debugPrint('⚠️ User just logged in but email not verified, redirecting to verification');
+              return AppRoutes.emailVerification;
+            }
+          }
+          
+          // Continue with regular checks
+          // For all routes that need verification, check email verification
           if (!isEmailVerified && !AppRoutes.noVerificationRequiredRoutes.contains(currentPath)) {
             debugPrint('Email not verified, redirecting to verification screen');
             return AppRoutes.emailVerification;
           }
           
-          // Business setup check
+          // Business setup check - only for verified emails
           final businessSetupCompleted = user?.hasCompletedSetup ?? false;
           
+          // If business setup is not completed and trying to access a route that requires it
           if (!businessSetupCompleted) {
-            if (currentPath != AppRoutes.onboarding && currentPath != AppRoutes.businessSetup) {
+            // Allow onboarding and business setup pages
+            if (currentPath == AppRoutes.onboarding || currentPath == AppRoutes.businessSetup) {
+              return null;
+            }
+            
+            // For all other routes, redirect to onboarding
+            if (AppRoutes.setupRequiredRoutes.contains(currentPath) || 
+                AppRoutes.isDashboardRoute(currentPath)) {
               debugPrint('Business setup not completed, redirecting to onboarding');
               return AppRoutes.onboarding;
             }
-          } else if (currentPath == AppRoutes.onboarding) {
-            // Skip onboarding if setup is already complete
+          }
+          
+          // Special case: If coming from registration
+          if (_isAfterRegistration) {
+            _isAfterRegistration = false; // Reset the flag
+            debugPrint('User just registered, directing to onboarding flow');
+            return AppRoutes.onboarding;
+          }
+          
+          // If on login or register page and authenticated with verified email and completed setup
+          if ((currentPath == AppRoutes.login || currentPath == AppRoutes.register) && 
+              isEmailVerified && businessSetupCompleted) {
+            debugPrint('User on login/register with verified email and completed setup, directing to dashboard');
+            return AppRoutes.dashboard;
+          }
+          
+          // If already on onboarding but setup is already complete, skip to dashboard
+          if (currentPath == AppRoutes.onboarding && businessSetupCompleted) {
             debugPrint('Setup already complete, skipping onboarding');
             return AppRoutes.dashboard;
           }

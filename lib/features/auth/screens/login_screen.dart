@@ -80,8 +80,12 @@ Future<void> _handleLogin() async {
       final authStatus = Provider.of<AuthProvider>(context, listen: false).status;
       
       if (authStatus == AuthStatus.authenticated) {
-        // Force navigation when authenticated
-        context.go(AppRoutes.splash);
+        // Set the flag to trigger email verification check in the router
+        AppRouter.setJustLoggedIn();
+        debugPrint('Login successful - marked user as just logged in');
+        
+        // Force navigation when authenticated (router will handle redirection)
+        context.go(AppRoutes.dashboard);
       } else {
         setState(() {
           _isLoading = false;
@@ -98,7 +102,6 @@ Future<void> _handleLogin() async {
     }
   }
 }
-
   @override
   Widget build(BuildContext context) {
     final theme = context.read<ThemeProvider>();

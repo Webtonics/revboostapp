@@ -91,6 +91,7 @@ class SubscriptionProvider with ChangeNotifier {
   }
   
   // Method to load subscription status
+  
   // In your loadSubscriptionStatus or reloadSubscriptionStatus method
 Future<void> _loadSubscriptionStatus() async {
   if (_auth.currentUser == null) {
@@ -161,6 +162,88 @@ Future<void> _loadSubscriptionStatus() async {
   } catch (e) {
     _isLoading = false;
     _errorMessage = 'Error loading subscription status: $e';
+    notifyListeners();
+  }
+}
+
+
+Future<void> refreshSubscriptionStatus() async {
+  if (_auth.currentUser == null) {
+    _subscriptionStatus = SubscriptionStatus.free();
+    notifyListeners();
+    return;
+  }
+  
+  try {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    
+    final userId = _auth.currentUser!.uid;
+    
+    // Get user document with cache disabled to ensure fresh data
+    final userDoc = await _firestore.collection('users').doc(userId)
+        .get(GetOptions(source: Source.server)); // Force server fetch
+    
+    if (!userDoc.exists) {
+      _subscriptionStatus = SubscriptionStatus.free();
+      _isLoading = false;
+      notifyListeners();
+      return;
+    }
+    
+    final userData = userDoc.data()!;
+    
+    // Check subscription status
+    final status = userData['subscriptionStatus'] as String?;
+    final isActive = status == 'active' || status == 'on_trial';
+    
+    // Check for free trial
+    final isFreeTrial = status == 'on_trial';
+    final trialEndDate = userData['trialEndDate'] != null
+        ? (userData['trialEndDate'] as Timestamp).toDate()
+        : null;
+    
+    // Update instance variables
+    _isFreeTrial = isFreeTrial;
+    _trialEndDate = trialEndDate;
+    
+    // Handle the orderId properly - convert to string if needed
+    String? orderId;
+    if (userData['subscriptionOrderId'] != null) {
+      // Convert to string regardless of original type
+      orderId = userData['subscriptionOrderId'].toString();
+    }
+    
+    final planId = userData['subscriptionPlanId'] as String?;
+    final expiresAt = userData['subscriptionEndDate'] != null
+        ? (userData['subscriptionEndDate'] as Timestamp).toDate()
+        : null;
+    
+    // Get customerId and ensure it's a string
+    String? customerId;
+    if (userData['lemonSqueezyCustomerId'] != null) {
+      customerId = userData['lemonSqueezyCustomerId'].toString();
+    }
+    
+    _subscriptionStatus = SubscriptionStatus(
+      isActive: isActive,
+      planId: planId,
+      expiresAt: expiresAt,
+      orderId: orderId,
+      customerId: customerId,
+      isFreeTrial: isFreeTrial,
+      trialEndDate: trialEndDate,
+    );
+    
+    debugPrint('Refreshed subscription status - isActive: $isActive, isFreeTrial: $isFreeTrial');
+    
+    _isLoading = false;
+    notifyListeners();
+  } catch (e) {
+    _isLoading = false;
+    _errorMessage = 'Error refreshing subscription status: $e';
+    debugPrint(_errorMessage);
     notifyListeners();
   }
 }

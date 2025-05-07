@@ -117,13 +117,19 @@ class PlaceholderScreen extends StatelessWidget {
   }
 }
 
-/// Unified router configuration for the application - SIMPLIFIED VERSION
+/// Unified router configuration for the application
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
   
   // Improved redirect state management
   static bool _isRedirecting = false;
   static DateTime _lastRedirectTime = DateTime.now().subtract(const Duration(seconds: 1));
+  
+  // Track if we're coming from registration flow to prevent premature dashboard redirection
+  static bool _isAfterRegistration = false;
+  
+  // Track subscription status check to avoid redirect loops
+  static Map<String, bool> _subscriptionCheckCache = {};
   
   /// Get the configured GoRouter instance
   static GoRouter get router {
@@ -132,7 +138,7 @@ class AppRouter {
       initialLocation: AppRoutes.splash,
       debugLogDiagnostics: kDebugMode, // Only enable in debug mode
       
-      /// Minimalistic redirect logic that only handles essential flows
+      /// Redirect logic with fixed issue handling
       redirect: (context, state) async {
         final currentPath = state.uri.path;
         final now = DateTime.now();
@@ -146,8 +152,14 @@ class AppRouter {
         _lastRedirectTime = now;
         
         try {
+          // Clear the subscription check cache for non-premium routes
+          // This ensures we always check subscription status on premium route navigation
+          if (!AppRoutes.premiumRoutes.contains(currentPath)) {
+            _subscriptionCheckCache.clear();
+          }
+          
           // Get auth state
-          final authProvider = Provider.of<AuthProvider>(context, listen:false);
+          final authProvider = Provider.of<AuthProvider>(context, listen: false);
           final isAuthenticated = authProvider.status == AuthStatus.authenticated;
           final user = authProvider.user;
           
@@ -171,6 +183,10 @@ class AppRouter {
           // If not authenticated, redirect to login (unless on a public route)
           if (!isAuthenticated) {
             debugPrint('User not authenticated, redirecting to: ${isPublicRoute ? 'staying on public route' : AppRoutes.login}');
+            
+            // Reset registration flow tracking when logging out
+            _isAfterRegistration = false;
+            
             return isPublicRoute ? null : AppRoutes.login;
           }
 
@@ -186,8 +202,24 @@ class AppRouter {
           
           // From here, user is authenticated
           
-          // If on a public route (except splash), go to dashboard
-          if (isPublicRoute && currentPath != AppRoutes.splash) {
+          // If on login or register page, redirect appropriately based on setup status
+          if (currentPath == AppRoutes.login || currentPath == AppRoutes.register) {
+            // Check if user just registered (this flag is set in the RegisterScreen)
+            if (_isAfterRegistration) {
+              debugPrint('User just registered, directing to onboarding flow');
+              _isAfterRegistration = false; // Reset the flag
+              return AppRoutes.onboarding;
+            }
+            
+            // For normal login, check setup status
+            final businessSetupCompleted = user?.hasCompletedSetup ?? false;
+            
+            if (!businessSetupCompleted) {
+              debugPrint('User logged in but needs to complete setup, directing to onboarding');
+              return AppRoutes.onboarding;
+            }
+            
+            debugPrint('User logged in with completed setup, directing to dashboard');
             return AppRoutes.dashboard;
           }
           
@@ -196,6 +228,7 @@ class AppRouter {
           
           // Need email verification
           if (!isEmailVerified && !AppRoutes.noVerificationRequiredRoutes.contains(currentPath)) {
+            debugPrint('Email not verified, redirecting to verification screen');
             return AppRoutes.emailVerification;
           }
           
@@ -204,18 +237,43 @@ class AppRouter {
           
           if (!businessSetupCompleted) {
             if (currentPath != AppRoutes.onboarding && currentPath != AppRoutes.businessSetup) {
+              debugPrint('Business setup not completed, redirecting to onboarding');
               return AppRoutes.onboarding;
             }
+          } else if (currentPath == AppRoutes.onboarding) {
+            // Skip onboarding if setup is already complete
+            debugPrint('Setup already complete, skipping onboarding');
+            return AppRoutes.dashboard;
           }
           
           // Subscription check (only for premium routes)
           if (AppRoutes.premiumRoutes.contains(currentPath)) {
-            final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
-            final hasActiveSubscription = subscriptionProvider.isSubscribed;
-            final isFreeTrial = subscriptionProvider.isFreeTrial;
-            
-            if (!hasActiveSubscription && !isFreeTrial) {
-              return AppRoutes.subscription;
+            // Check if we've already verified subscription status for this route
+            // to prevent redirect loops
+            if (!_subscriptionCheckCache.containsKey(currentPath)) {
+              final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+              
+              // Force refresh subscription status on first premium route access
+              await subscriptionProvider.refreshSubscriptionStatus();
+              
+              final hasActiveSubscription = subscriptionProvider.isSubscribed;
+              final isFreeTrial = subscriptionProvider.isFreeTrial;
+              
+              // Cache the result to prevent loops
+              _subscriptionCheckCache[currentPath] = hasActiveSubscription || isFreeTrial;
+              
+              debugPrint('Premium route check: hasSubscription=$hasActiveSubscription, isFreeTrial=$isFreeTrial');
+              
+              if (!hasActiveSubscription && !isFreeTrial) {
+                debugPrint('No active subscription, redirecting to subscription page');
+                return AppRoutes.subscription;
+              }
+            } else {
+              // Use cached result
+              if (!_subscriptionCheckCache[currentPath]!) {
+                debugPrint('Using cached subscription check: no subscription');
+                return AppRoutes.subscription;
+              }
             }
           }
           
@@ -245,7 +303,16 @@ class AppRouter {
         ),
         GoRoute(
           path: AppRoutes.register,
-          builder: (context, state) => const RegisterScreen(),
+          builder: (context, state) {
+            // Wrap the RegisterScreen in a builder that can set the registration flag
+            return RegisterScreen(
+              onRegisterSuccess: () {
+                // Set the flag when registration is successful
+                _isAfterRegistration = true;
+                debugPrint('Registration successful, setting flag for onboarding flow');
+              },
+            );
+          },
         ),
         GoRoute(
           path: AppRoutes.forgotPassword,
@@ -393,6 +460,11 @@ class AppRouter {
                   return FadeTransition(opacity: animation, child: child);
                 },
               ),
+              onExit: (context) {
+                // Clear subscription cache when exiting this route
+                _subscriptionCheckCache.remove(AppRoutes.reviewRequests);
+                return true;
+              },
             ),
             GoRoute(
               path: AppRoutes.contacts,
@@ -403,6 +475,11 @@ class AppRouter {
                   return FadeTransition(opacity: animation, child: child);
                 },
               ),
+              onExit: (context) {
+                // Clear subscription cache when exiting this route
+                _subscriptionCheckCache.remove(AppRoutes.contacts);
+                return true;
+              },
             ),
             GoRoute(
               path: AppRoutes.qrCode,
@@ -413,6 +490,11 @@ class AppRouter {
                   return FadeTransition(opacity: animation, child: child);
                 },
               ),
+              onExit: (context) {
+                // Clear subscription cache when exiting this route
+                _subscriptionCheckCache.remove(AppRoutes.qrCode);
+                return true;
+              },
             ),
             GoRoute(
               path: AppRoutes.templates,
@@ -423,6 +505,11 @@ class AppRouter {
                   return FadeTransition(opacity: animation, child: child);
                 },
               ),
+              onExit: (context) {
+                // Clear subscription cache when exiting this route
+                _subscriptionCheckCache.remove(AppRoutes.templates);
+                return true;
+              },
             ),
           ],
         ),

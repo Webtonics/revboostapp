@@ -69,7 +69,7 @@ class SubscriptionProvider with ChangeNotifier {
           'Private feedback collection',
           'Priority support',
         ],
-        // lemonSqueezyProductId: '5411962e-7695-4cb0-9f79-271fbc0c2964', // Test product ID
+        // lemonSqueezyggProductId: '5411962e-7695-4cb0-9f79-271fbc0c2964', // Test product ID
         lemonSqueezyProductId: '0016db55-8733-4da7-977f-0d6e61bdab26', // Live product ID
       ),
       SubscriptionPlan(

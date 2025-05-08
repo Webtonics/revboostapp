@@ -85,7 +85,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
   }
 
   void _completeOnboarding() async {
-  await OnboardingService.setOnboardingCompleted();
+  // await OnboardingService.setOnboardingCompleted();
   
   if (mounted) {
     // Navigate to business setup next

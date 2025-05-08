@@ -83,7 +83,7 @@ Future<void> _handleLogin() async {
       
       if (authStatus == AuthStatus.authenticated) {
         // Set the flag to trigger email verification check in the router
-        AppRouter.setJustLoggedIn();
+        // AppRouter.setJustLoggedIn();
         debugPrint('Login successful - marked user as just logged in');
         
         // Navigate to dashboard - router will handle redirection to verification if needed

@@ -402,7 +402,7 @@ Future<void> _completeSetup() async {
           ],
         ),
         body: Container(
-          padding: EdgeInsets.symmetric( horizontal: isSmallScreen? 10: 300, vertical: 40),
+          padding: EdgeInsets.symmetric( horizontal: isSmallScreen? 10: 250, vertical: 10),
           // Add a subtle gradient background for polish
           decoration: BoxDecoration(
             gradient: LinearGradient(

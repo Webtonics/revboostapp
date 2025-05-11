@@ -38,38 +38,111 @@ class _BusinessFeedbackPageState extends State<BusinessFeedbackPage> {
   }
 
   /// Load business data and then load all feedback for that business
-  Future<List<FeedbackModel>> _loadBusinessDataAndFeedback() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      throw Exception('User not authenticated');
-    }
+  // Future<List<FeedbackModel>> _loadBusinessDataAndFeedback() async {
+  //   final user = FirebaseAuth.instance.currentUser;
+  //   if (user == null) {
+  //     throw Exception('User not authenticated');
+  //   }
     
-    // Store user email for later use
-    _userEmail = user.email;
+  //   // Store user email for later use
+  //   _userEmail = user.email;
     
-    // First get the user document to find business IDs
+  //   // First get the user document to find business IDs
+  //   final userDoc = await FirebaseFirestore.instance
+  //       .collection('users')
+  //       .doc(user.uid)
+  //       .get();
+    
+  //   if (!userDoc.exists) {
+  //     throw Exception('User document not found');
+  //   }
+    
+  //   final userData = userDoc.data() as Map<String, dynamic>;
+    
+  //   // Get business IDs from user document
+  //   final businessIds = List<String>.from(userData['businessIds'] ?? []);
+    
+  //   if (businessIds.isEmpty) {
+  //     throw Exception('No businesses found for user');
+  //   }
+    
+  //   // Use the first business ID (most apps have one business per user)
+  //   _businessId = businessIds.first;
+    
+  //   // Get business details
+  //   final businessDoc = await FirebaseFirestore.instance
+  //       .collection('businesses')
+  //       .doc(_businessId)
+  //       .get();
+    
+  //   if (businessDoc.exists) {
+  //     final businessData = businessDoc.data() as Map<String, dynamic>;
+  //     _businessName = businessData['name'] as String?;
+  //   }
+    
+  //   // Now load the feedback for this business
+  //   return await _feedbackService.getFeedbackForBusinessOnce(_businessId!);
+  // }
+/// Load business data and then load all feedback for that business
+Future<List<FeedbackModel>> _loadBusinessDataAndFeedback() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) {
+    throw Exception('User not authenticated');
+  }
+  
+  // Store user email for later use
+  _userEmail = user.email;
+  
+  // Try to get business ID using multiple approaches
+  String? businessId;
+  
+  // First approach: Get businessIds from user document
+  try {
     final userDoc = await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .get();
     
-    if (!userDoc.exists) {
-      throw Exception('User document not found');
+    if (userDoc.exists) {
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final businessIds = List<String>.from(userData['businessIds'] ?? []);
+      
+      if (businessIds.isNotEmpty) {
+        businessId = businessIds.first;
+        debugPrint('✅ Found business ID from user document: $businessId');
+      }
     }
-    
-    final userData = userDoc.data() as Map<String, dynamic>;
-    
-    // Get business IDs from user document
-    final businessIds = List<String>.from(userData['businessIds'] ?? []);
-    
-    if (businessIds.isEmpty) {
-      throw Exception('No businesses found for user');
+  } catch (e) {
+    debugPrint('⚠️ Error getting business ID from user document: $e');
+  }
+  
+  // Second approach: Query businesses collection if first approach failed
+  if (businessId == null) {
+    try {
+      final businessesSnapshot = await FirebaseFirestore.instance
+          .collection('businesses')
+          .where('ownerId', isEqualTo: user.uid)
+          .limit(1)
+          .get();
+      
+      if (businessesSnapshot.docs.isNotEmpty) {
+        businessId = businessesSnapshot.docs.first.id;
+        debugPrint('✅ Found business ID by querying businesses: $businessId');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error querying businesses: $e');
     }
-    
-    // Use the first business ID (most apps have one business per user)
-    _businessId = businessIds.first;
-    
-    // Get business details
+  }
+  
+  // If still no business ID, throw an error
+  if (businessId == null) {
+    throw Exception('No businesses found for user');
+  }
+  
+  _businessId = businessId;
+  
+  // Get business details
+  try {
     final businessDoc = await FirebaseFirestore.instance
         .collection('businesses')
         .doc(_businessId)
@@ -79,11 +152,13 @@ class _BusinessFeedbackPageState extends State<BusinessFeedbackPage> {
       final businessData = businessDoc.data() as Map<String, dynamic>;
       _businessName = businessData['name'] as String?;
     }
-    
-    // Now load the feedback for this business
-    return await _feedbackService.getFeedbackForBusinessOnce(_businessId!);
+  } catch (e) {
+    debugPrint('⚠️ Error getting business details: $e');
   }
-
+  
+  // Now load the feedback for this business
+  return await _feedbackService.getFeedbackForBusinessOnce(_businessId!);
+}
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<FeedbackModel>>(

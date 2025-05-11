@@ -207,6 +207,74 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
       });
     }
   }
+// Future<void> _completeSetup() async {
+//   // Show loading indicator
+//   setState(() {
+//     _isLoading = true;
+//   });
+  
+//   try {
+//     // Get providers
+//     final businessProvider = Provider.of<BusinessSetupProvider>(context, listen: false);
+//     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+//     // Ensure business info is set
+//     businessProvider.setBusinessInfo(
+//       name: _businessNameController.text.trim(),
+//       description: _businessDescriptionController.text.trim(),
+//     );
+    
+//     // Save review platform links
+//     for (final platform in _reviewPlatformControllers.keys) {
+//       final link = _reviewPlatformControllers[platform]!.text.trim();
+//       if (link.isNotEmpty) {
+//         businessProvider.setReviewLink(platform, link);
+//       } else {
+//         businessProvider.removeReviewLink(platform);
+//       }
+//     }
+    
+//     // Save business setup to Firebase (without logo)
+//     await businessProvider.saveBusinessSetup();
+    
+//     // Mark setup as completed in OnboardingService
+//     await OnboardingService.setBusinessSetupCompleted();
+    
+//     // Update the user's hasCompletedSetup flag in AuthProvider
+//     await authProvider.updateUserSetupStatus(true);
+    
+//     // Force reload the user data to get updated status
+//     await authProvider.reloadAuthState();
+    
+//     // Hide loading indicator
+//     setState(() {
+//       _isLoading = false;
+//     });
+    
+//     // Navigation: check if mounted, then navigate
+//     if (mounted) {
+//       // Navigate directly to dashboard instead of splash
+//       debugPrint('⚡ Business setup completed, navigating to dashboard');
+//       context.go(AppRoutes.dashboard);
+//     }
+//   } catch (e) {
+//     // Hide loading indicator
+//     setState(() {
+//       _isLoading = false;
+//     });
+    
+//     // Show error message if mounted
+//     if (mounted) {
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         SnackBar(
+//           content: Text('Error: ${e.toString()}'),
+//           behavior: SnackBarBehavior.floating,
+//           backgroundColor: Colors.red.shade700,
+//         ),
+//       );
+//     }
+//   }
+// }
 Future<void> _completeSetup() async {
   // Show loading indicator
   setState(() {
@@ -237,14 +305,17 @@ Future<void> _completeSetup() async {
     // Save business setup to Firebase (without logo)
     await businessProvider.saveBusinessSetup();
     
-    // Mark setup as completed in OnboardingService
+    // Mark setup as completed in both services
     await OnboardingService.setBusinessSetupCompleted();
     
-    // Update the user's hasCompletedSetup flag in AuthProvider
+    // This is critical: update the user object in auth provider
     await authProvider.updateUserSetupStatus(true);
     
-    // Force reload the user data to get updated status
-    await authProvider.reloadAuthState();
+    // Ensure the user data is fully reloaded to reflect the change
+    await authProvider.reloadUser();
+    
+    // Add a small delay to ensure Firebase updates are registered
+    await Future.delayed(const Duration(milliseconds: 500));
     
     // Hide loading indicator
     setState(() {
@@ -253,7 +324,7 @@ Future<void> _completeSetup() async {
     
     // Navigation: check if mounted, then navigate
     if (mounted) {
-      // Navigate directly to dashboard instead of splash
+      // Navigate to dashboard through splash for proper redirection
       debugPrint('⚡ Business setup completed, navigating to dashboard');
       context.go(AppRoutes.dashboard);
     }
@@ -275,77 +346,6 @@ Future<void> _completeSetup() async {
     }
   }
 }
-//   Future<void> _completeSetup() async {
-//   // Show loading indicator
-//   setState(() {
-//     _isLoading = true;
-//   });
-  
-//   try {
-//     // Get providers
-//     final businessProvider = Provider.of<BusinessSetupProvider>(context, listen: false);
-//     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
-//     // Ensure business info is set
-//     businessProvider.setBusinessInfo(
-//       name: _businessNameController.text.trim(),
-//       description: _businessDescriptionController.text.trim(),
-//     );
-    
-//     // Save review platform links
-//     for (final platform in _reviewPlatformControllers.keys) {
-//       final link = _reviewPlatformControllers[platform]!.text.trim();
-//       if (link.isNotEmpty) {
-//         businessProvider.setReviewLink(platform, link);
-//       } else {
-//         businessProvider.removeReviewLink(platform);
-//       }
-//     }
-    
-//     // Save business setup to Firebase (without logo)
-//     await businessProvider.saveBusinessSetup();
-    
-//     // Mark setup as completed in both services
-//     await OnboardingService.setBusinessSetupCompleted();
-    
-//     // This is critical: update the user object in auth provider
-//     await authProvider.updateUserSetupStatus(true);
-    
-//     // Ensure the user data is fully reloaded to reflect the change
-//     await authProvider.reloadUser();
-    
-//     // Add a small delay to ensure Firebase updates are registered
-//     await Future.delayed(const Duration(milliseconds: 500));
-    
-//     // Hide loading indicator
-//     setState(() {
-//       _isLoading = false;
-//     });
-    
-//     // Navigation: check if mounted, then navigate
-//     if (mounted) {
-//       // Navigate to dashboard through splash for proper redirection
-//       debugPrint('⚡ Business setup completed, navigating to dashboard');
-//       context.go(AppRoutes.dashboard);
-//     }
-//   } catch (e) {
-//     // Hide loading indicator
-//     setState(() {
-//       _isLoading = false;
-//     });
-    
-//     // Show error message if mounted
-//     if (mounted) {
-//       ScaffoldMessenger.of(context).showSnackBar(
-//         SnackBar(
-//           content: Text('Error: ${e.toString()}'),
-//           behavior: SnackBarBehavior.floating,
-//           backgroundColor: Colors.red.shade700,
-//         ),
-//       );
-//     }
-//   }
-// }
 
   @override
   Widget build(BuildContext context) {
@@ -402,7 +402,7 @@ Future<void> _completeSetup() async {
           ],
         ),
         body: Container(
-          padding: EdgeInsets.symmetric( horizontal: isSmallScreen? 10: 250, vertical: 10),
+          padding: EdgeInsets.symmetric( horizontal: isSmallScreen? 10: 250),
           // Add a subtle gradient background for polish
           decoration: BoxDecoration(
             gradient: LinearGradient(

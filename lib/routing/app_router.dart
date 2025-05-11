@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:revboostapp/features/auth/screens/email_verification_screen.dart';
 import 'package:revboostapp/features/auth/screens/forgot_password_screen.dart';
 import 'package:revboostapp/features/auth/screens/login_screen.dart';
@@ -257,7 +258,9 @@ class AppRouter {
           //   return AppRoutes.dashboard;
           // }
           // Step 1: Email Verification Check
-        final isEmailVerified = user?.emailVerified ?? false;
+        // Get the most up-to-date email verification status directly from Firebase Auth
+        final firebaseUser = firebase_auth.FirebaseAuth.instance.currentUser;
+        final isEmailVerified = firebaseUser?.emailVerified ?? user?.emailVerified ?? false;
 
         // Only do verification check if not already on verification screen
         if (!isEmailVerified) {

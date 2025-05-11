@@ -113,6 +113,12 @@ class BusinessSetupService {
 //     throw Exception('Failed to save business information: $e');
 //   }
 // }
+// In the BusinessSetupService class in lib/features/business_setup/services/business_setup_service.dart
+
+// In BusinessSetupService - lib/features/business_setup/services/business_setup_service.dart
+
+// In BusinessSetupService - lib/features/business_setup/services/business_setup_service.dart
+
 Future<String> saveBusinessInfo({
   required String name,
   required String description,
@@ -131,7 +137,7 @@ Future<String> saveBusinessInfo({
       ownerId: user.uid,
       name: name,
       description: description,
-      logoUrl: logoUrl, // Make logo optional
+      logoUrl: logoUrl,
       reviewLinks: reviewLinks,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
@@ -142,20 +148,42 @@ Future<String> saveBusinessInfo({
       newBusiness.toFirestore(),
     );
     
-    // Update the user's profile with business info
-    await _firestore.collection('users').doc(user.uid).update({
-      'hasCompletedSetup': true,
-      'businessIds': FieldValue.arrayUnion([docRef.id]),
-      'updatedAt': Timestamp.now(),
-    });
+    final businessId = docRef.id;
+    debugPrint('📝 Created business with ID: $businessId');
     
-    return docRef.id;
+    // Force update with a direct array value instead of using arrayUnion
+    try {
+      // Update using a completely explicit approach
+      await _firestore.collection('users').doc(user.uid).set({
+        'hasCompletedSetup': true,
+        'businessIds': [businessId], // Force create a new array with this ID
+        'updatedAt': Timestamp.now(),
+      }, SetOptions(merge: true)); // Use merge to avoid overwriting other fields
+      
+      debugPrint('✅ Directly set businessIds array with ID: $businessId');
+    } catch (e) {
+      debugPrint('⚠️ Error updating user document with businessIds: $e');
+      
+      // Try an alternative approach if the first one fails
+      try {
+        await _firestore.collection('users').doc(user.uid).update({
+          'hasCompletedSetup': true,
+          'businessIds': [businessId], // Direct array instead of FieldValue
+          'updatedAt': Timestamp.now(),
+        });
+        debugPrint('✅ Alternative update method succeeded');
+      } catch (e2) {
+        debugPrint('⚠️ Alternative method also failed: $e2');
+        // Continue anyway so the business is at least created
+      }
+    }
+    
+    return businessId;
   } catch (e) {
     debugPrint('Error saving business info: $e');
     throw Exception('Failed to save business information: $e');
   }
 }
-  
   // Update business review links
   Future<void> updateReviewLinks(String businessId, Map<String, String> links) async {
     try {

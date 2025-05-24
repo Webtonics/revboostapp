@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:revboostapp/features/auth/screens/email_verification_screen.dart';
 import 'package:revboostapp/features/auth/screens/forgot_password_screen.dart';
 import 'package:revboostapp/features/auth/screens/login_screen.dart';
@@ -62,13 +61,18 @@ class AppRoutes {
     forgotPassword,
     authAction,
     resetPassword,
-    reviewPage,
   ];
 
   // Routes that are accessible without email verification
   static final List<String> noVerificationRequiredRoutes = [
     ...publicRoutes,
     emailVerification,
+    onboarding,
+    businessSetup,
+    dashboard,
+    settings,
+    subscription,
+    subscriptionSuccess,
   ];
 
   // Routes that require subscription or free trial
@@ -135,223 +139,123 @@ class PlaceholderScreen extends StatelessWidget {
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
   
-  // Improved redirect state management
-  static bool _isRedirecting = false;
-  static DateTime _lastRedirectTime = DateTime.now().subtract(const Duration(seconds: 1));
-  
-  // Track if we're coming from registration flow to prevent premature dashboard redirection
-  static bool _isAfterRegistration = false;
-  
-  // Track subscription status check to avoid redirect loops
-  static Map<String, bool> _subscriptionCheckCache = {};
+  // Simple redirect throttling - prevent rapid redirects
+  static DateTime _lastRedirectTime = DateTime.now().subtract(const Duration(seconds: 10));
   
   /// Get the configured GoRouter instance
   static GoRouter get router {
     return GoRouter(
       navigatorKey: _rootNavigatorKey,
       initialLocation: AppRoutes.splash,
-      debugLogDiagnostics: kDebugMode, // Only enable in debug mode
+      debugLogDiagnostics: kDebugMode,
       
-      /// Redirect logic with fixed issue handling
+      /// Simplified redirect logic that focuses on core flows
       redirect: (context, state) async {
         final currentPath = state.uri.path;
         final now = DateTime.now();
         
-        // Skip redirect if already redirecting but only if very recent
-        if (_isRedirecting && now.difference(_lastRedirectTime).inMilliseconds < 300) {
+        // Throttle redirects to prevent infinite loops
+        if (now.difference(_lastRedirectTime).inMilliseconds < 100) {
           return null;
         }
-        
-        _isRedirecting = true;
         _lastRedirectTime = now;
         
+        if (kDebugMode) {
+          debugPrint('🔄 Router redirect check: $currentPath');
+        }
+        
         try {
-          // Clear the subscription check cache for non-premium routes
-          // This ensures we always check subscription status on premium route navigation
-          if (!AppRoutes.premiumRoutes.contains(currentPath)) {
-            _subscriptionCheckCache.clear();
+          // Always allow public routes and review pages
+          if (AppRoutes.publicRoutes.contains(currentPath) || 
+              AppRoutes.isPublicReviewRoute(currentPath)) {
+            if (kDebugMode) {
+              debugPrint('✅ Public route allowed: $currentPath');
+            }
+            return null;
           }
           
           // Get auth state
           final authProvider = Provider.of<AuthProvider>(context, listen: false);
-          final isAuthenticated = authProvider.status == AuthStatus.authenticated;
+          final authStatus = authProvider.status;
           final user = authProvider.user;
           
-          // Debug logging
-          debugPrint('Router check: path=$currentPath, authenticated=$isAuthenticated');
-          
-          // Skip all redirects for splash screen - let the splash handle navigation
-          if (currentPath == AppRoutes.splash) {
-            return null;
+          if (kDebugMode) {
+            debugPrint('🔐 Auth status: $authStatus, User: ${user?.email}');
           }
           
-          // Handle public routes
-          final isPublicRoute = AppRoutes.publicRoutes.contains(currentPath) || 
-                               AppRoutes.isPublicReviewRoute(currentPath);
-          
-          // Skip redirects for public review pages
-          if (AppRoutes.isPublicReviewRoute(currentPath)) {
-            return null;
+          // Handle authentication loading state
+          if (authStatus == AuthStatus.loading || authStatus == AuthStatus.initial) {
+            if (kDebugMode) {
+              debugPrint('⏳ Auth loading, staying on current route');
+            }
+            return null; // Stay on current route while loading
           }
           
-          // If not authenticated, redirect to login (unless on a public route)
-          if (!isAuthenticated) {
-            debugPrint('User not authenticated, redirecting to: ${isPublicRoute ? 'staying on public route' : AppRoutes.login}');
-            
-            // Reset registration flow tracking when logging out
-            _isAfterRegistration = false;
-            
-            return isPublicRoute ? null : AppRoutes.login;
+          // Handle unauthenticated users
+          if (authStatus != AuthStatus.authenticated || user == null) {
+            if (kDebugMode) {
+              debugPrint('❌ Not authenticated, redirecting to login');
+            }
+            return AppRoutes.login;
           }
-
+          
           // From here, user is authenticated
-          
-          // final isEmailVerified = user?.emailVerified ?? false;
-          // if (!isEmailVerified) {
-          //   // Only check if:
-          //   // 1. Not already on verification screen
-          //   // 2. Not on a route that doesn't require verification
-          //   if (currentPath != AppRoutes.emailVerification && 
-          //       !AppRoutes.noVerificationRequiredRoutes.contains(currentPath)) {
-          //     debugPrint('Email not verified, redirecting to verification screen');
-          //     return AppRoutes.emailVerification;
-          //   } else {
-          //     debugPrint('Skipping email verification redirect - either already on verification screen or on public route');
-          //   }
-          // } else {
-          //   debugPrint('Email verified ✓ - skipping verification redirect');
-          // }
-          // // Second check: Business setup completion
-          // final businessSetupCompleted = user?.hasCompletedSetup ?? false;
-          
-          // // If business setup is not completed and trying to access a route that requires it
-          // if (!businessSetupCompleted) {
-          //   // Allow onboarding and business setup pages
-          //   if (currentPath == AppRoutes.onboarding || currentPath == AppRoutes.businessSetup) {
-          //     return null;
-          //   }
-            
-          //   // For all other routes, redirect to onboarding
-          //   if (AppRoutes.setupRequiredRoutes.contains(currentPath) || currentPath.startsWith('/dashboard')) {
-          //     debugPrint('Business setup not completed, redirecting to onboarding');
-          //     return AppRoutes.onboarding;
-          //   }
-          // }
-          
-          // // Special case: If coming from registration and email is verified
-          // if (_isAfterRegistration && isEmailVerified) {
-          //   debugPrint('User just registered with verified email, directing to onboarding flow');
-          //   _isAfterRegistration = false; // Reset the flag
-          //   return AppRoutes.onboarding;
-          // }
-          
-          // // If on login or register page and authenticated with completed setup, go to dashboard
-          // if ((currentPath == AppRoutes.login || currentPath == AppRoutes.register) && 
-          //     isEmailVerified && businessSetupCompleted) {
-          //   debugPrint('User logged in with verified email and completed setup, directing to dashboard');
-          //   return AppRoutes.dashboard;
-          // }
-          
-          // // If already on onboarding but setup is already complete, skip to dashboard
-          // if (currentPath == AppRoutes.onboarding && businessSetupCompleted) {
-          //   debugPrint('Setup already complete, skipping onboarding');
-          //   return AppRoutes.dashboard;
-          // }
-          // Step 1: Email Verification Check
-        // Get the most up-to-date email verification status directly from Firebase Auth
-        final firebaseUser = firebase_auth.FirebaseAuth.instance.currentUser;
-        final isEmailVerified = firebaseUser?.emailVerified ?? user?.emailVerified ?? false;
-
-        // Only do verification check if not already on verification screen
-        if (!isEmailVerified) {
-          // Skip verification check only if on verification screen or route that doesn't need verification
-          if (currentPath != AppRoutes.emailVerification && 
-              !AppRoutes.noVerificationRequiredRoutes.contains(currentPath)) {
-            debugPrint('Email not verified, redirecting to verification screen');
-            return AppRoutes.emailVerification;
-          } else {
-            debugPrint('Skipping email verification redirect - already on compatible route');
+          if (kDebugMode) {
+            debugPrint('✅ User authenticated: ${user.email}');
+            debugPrint('📧 Email verified: ${user.emailVerified}');
+            debugPrint('🏢 Setup completed: ${user.hasCompletedSetup}');
           }
-        } else {
-          // Email is verified, now check business setup
-          debugPrint('Email verified ✓ - proceeding to business setup check');
           
-          // Step 2: Business Setup Check - Only run if email is verified
-          final businessSetupCompleted = user?.hasCompletedSetup ?? false;
-          
-          if (!businessSetupCompleted) {
-            // Allow onboarding and business setup pages
-            if (currentPath == AppRoutes.onboarding || currentPath == AppRoutes.businessSetup) {
-              debugPrint('On appropriate setup screen - allowing navigation');
+          // Handle business setup flow
+          if (!user.hasCompletedSetup) {
+            // Allow setup-related routes
+            if (currentPath == AppRoutes.onboarding || 
+                currentPath == AppRoutes.businessSetup ||
+                currentPath == AppRoutes.emailVerification) {
+              if (kDebugMode) {
+                debugPrint('✅ Setup route allowed: $currentPath');
+              }
               return null;
             }
             
-            // Special case for after registration
-            if (_isAfterRegistration) {
-              _isAfterRegistration = false; // Reset the flag
-              debugPrint('After registration - redirecting to onboarding');
-              return AppRoutes.onboarding;
+            // Redirect to onboarding for any other route
+            if (kDebugMode) {
+              debugPrint('🔄 Setup not complete, redirecting to onboarding');
             }
-            
-            // For all other routes, redirect to onboarding
-            if (AppRoutes.setupRequiredRoutes.contains(currentPath) || 
-                currentPath.startsWith(AppRoutes.dashboard) || 
-                currentPath.startsWith('/dashboard')) {
-              debugPrint('Business setup not completed, redirecting to onboarding');
-              return AppRoutes.onboarding;
-            }
-          } else {
-            debugPrint('Business setup completed ✓ - proceeding with normal navigation');
-            
-            // If on onboarding/setup but already completed, go to dashboard
-            if (currentPath == AppRoutes.onboarding || currentPath == AppRoutes.businessSetup) {
-              debugPrint('Setup already complete, redirecting to dashboard');
-              return AppRoutes.dashboard;
-            }
+            return AppRoutes.onboarding;
           }
-        }
           
-          // Subscription check (only for premium routes)
+          // Handle subscription check for premium routes
           if (AppRoutes.premiumRoutes.contains(currentPath)) {
-            // Check if we've already verified subscription status for this route
-            // to prevent redirect loops
-            if (!_subscriptionCheckCache.containsKey(currentPath)) {
-              final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
-              
-              // Force refresh subscription status on first premium route access
-              await subscriptionProvider.refreshSubscriptionStatus();
-              
-              final hasActiveSubscription = subscriptionProvider.isSubscribed;
-              final isFreeTrial = subscriptionProvider.isFreeTrial;
-              
-              // Cache the result to prevent loops
-              _subscriptionCheckCache[currentPath] = hasActiveSubscription || isFreeTrial;
-              
-              debugPrint('Premium route check: hasSubscription=$hasActiveSubscription, isFreeTrial=$isFreeTrial');
-              
-              if (!hasActiveSubscription && !isFreeTrial) {
-                debugPrint('No active subscription, redirecting to subscription page');
-                return AppRoutes.subscription;
+            final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+            
+            // Only check subscription if we have valid subscription data
+            if (subscriptionProvider.subscriptionStatus.isActive || 
+                subscriptionProvider.isFreeTrial) {
+              if (kDebugMode) {
+                debugPrint('✅ Premium route allowed: $currentPath');
               }
+              return null;
             } else {
-              // Use cached result
-              if (!_subscriptionCheckCache[currentPath]!) {
-                debugPrint('Using cached subscription check: no subscription');
-                return AppRoutes.subscription;
+              if (kDebugMode) {
+                debugPrint('💰 No subscription, redirecting to subscription page');
               }
+              return AppRoutes.subscription;
             }
           }
           
-          // Allow the navigation
+          // Allow all other authenticated routes
+          if (kDebugMode) {
+            debugPrint('✅ Route allowed: $currentPath');
+          }
           return null;
+          
         } catch (e) {
-          debugPrint('Router error: $e');
+          if (kDebugMode) {
+            debugPrint('❌ Router error: $e');
+          }
+          // On error, allow the route to prevent infinite redirects
           return null;
-        } finally {
-          // Reset redirecting flag with a slight delay
-          Future.delayed(const Duration(milliseconds: 200), () {
-            _isRedirecting = false;
-          });
         }
       },
       
@@ -368,16 +272,7 @@ class AppRouter {
         ),
         GoRoute(
           path: AppRoutes.register,
-          builder: (context, state) {
-            // Wrap the RegisterScreen in a builder that can set the registration flag
-            return RegisterScreen(
-              onRegisterSuccess: () {
-                // Set the flag when registration is successful
-                _isAfterRegistration = true;
-                debugPrint('Registration successful, setting flag for onboarding flow');
-              },
-            );
-          },
+          builder: (context, state) => const RegisterScreen(),
         ),
         GoRoute(
           path: AppRoutes.forgotPassword,
@@ -415,9 +310,6 @@ class AppRouter {
             final oobCode = state.uri.queryParameters['oobCode'];
             final continueUrl = state.uri.queryParameters['continueUrl'];
             
-            // Log debug info
-            debugPrint('Auth action handling: mode=$mode, code=${oobCode != null ? 'present' : 'missing'}');
-            
             // Handle each auth action mode
             if (mode == 'verifyEmail' && oobCode != null) {
               return EmailVerificationScreen(
@@ -442,7 +334,6 @@ class AppRouter {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text('Invalid or expired action link'),
-                    if (kDebugMode) Text('Debug info: mode=$mode, oobCode=${oobCode?.substring(0, min(5, oobCode.length)) ?? "null"}'),
                     const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: () => context.go(AppRoutes.login),
@@ -453,6 +344,16 @@ class AppRouter {
               ),
             );
           },
+        ),
+        
+        // SETUP FLOW ROUTES
+        GoRoute(
+          path: AppRoutes.onboarding,
+          builder: (context, state) => const OnboardingScreen(),
+        ),
+        GoRoute(
+          path: AppRoutes.businessSetup,
+          builder: (context, state) => const BusinessSetupScreen(),
         ),
         
         // MAIN APP ROUTES - Use shell route for shared layout
@@ -471,9 +372,7 @@ class AppRouter {
             else if (path.contains(AppRoutes.templates)) title = 'Templates';
             
             // Skip the shell for certain paths that should have their own layout
-            if (path == AppRoutes.onboarding || 
-                path == AppRoutes.businessSetup ||
-                path == AppRoutes.subscription ||
+            if (path == AppRoutes.subscription ||
                 path == AppRoutes.subscriptionSuccess ||
                 AppRoutes.isPublicReviewRoute(path)) {
               return child;
@@ -525,11 +424,6 @@ class AppRouter {
                   return FadeTransition(opacity: animation, child: child);
                 },
               ),
-              onExit: (context) {
-                // Clear subscription cache when exiting this route
-                _subscriptionCheckCache.remove(AppRoutes.reviewRequests);
-                return true;
-              },
             ),
             GoRoute(
               path: AppRoutes.contacts,
@@ -540,11 +434,6 @@ class AppRouter {
                   return FadeTransition(opacity: animation, child: child);
                 },
               ),
-              onExit: (context) {
-                // Clear subscription cache when exiting this route
-                _subscriptionCheckCache.remove(AppRoutes.contacts);
-                return true;
-              },
             ),
             GoRoute(
               path: AppRoutes.qrCode,
@@ -555,11 +444,6 @@ class AppRouter {
                   return FadeTransition(opacity: animation, child: child);
                 },
               ),
-              onExit: (context) {
-                // Clear subscription cache when exiting this route
-                _subscriptionCheckCache.remove(AppRoutes.qrCode);
-                return true;
-              },
             ),
             GoRoute(
               path: AppRoutes.templates,
@@ -570,38 +454,11 @@ class AppRouter {
                   return FadeTransition(opacity: animation, child: child);
                 },
               ),
-              onExit: (context) {
-                // Clear subscription cache when exiting this route
-                _subscriptionCheckCache.remove(AppRoutes.templates);
-                return true;
-              },
             ),
           ],
         ),
         
-        // Non-Shell Routes (need their own layout)
-        GoRoute(
-          path: AppRoutes.resetPassword,
-          builder: (context, state) {
-            final mode = state.uri.queryParameters['mode'];
-            final oobCode = state.uri.queryParameters['oobCode'];
-            final continueUrl = state.uri.queryParameters['continueUrl'];
-            
-            return ResetPasswordScreen(
-              mode: mode,
-              oobCode: oobCode,
-              continueUrl: continueUrl,
-            );
-          },
-        ),
-        GoRoute(
-          path: AppRoutes.onboarding,
-          builder: (context, state) => const OnboardingScreen(),
-        ),
-        GoRoute(
-          path: AppRoutes.businessSetup,
-          builder: (context, state) => const BusinessSetupScreen(),
-        ),
+        // SUBSCRIPTION ROUTES (outside shell for custom layout)
         GoRoute(
           path: AppRoutes.subscription,
           builder: (context, state) => const SubscriptionScreen(),
@@ -622,6 +479,22 @@ class AppRouter {
           },
         ),
         
+        // RESET PASSWORD ROUTE
+        GoRoute(
+          path: AppRoutes.resetPassword,
+          builder: (context, state) {
+            final mode = state.uri.queryParameters['mode'];
+            final oobCode = state.uri.queryParameters['oobCode'];
+            final continueUrl = state.uri.queryParameters['continueUrl'];
+            
+            return ResetPasswordScreen(
+              mode: mode,
+              oobCode: oobCode,
+              continueUrl: continueUrl,
+            );
+          },
+        ),
+        
         // PUBLIC REVIEW PAGE
         GoRoute(
           path: AppRoutes.reviewPage,
@@ -634,7 +507,9 @@ class AppRouter {
       
       // Error handler for routes that don't match
       errorBuilder: (context, state) {
-        debugPrint('Route not found: ${state.uri}');
+        if (kDebugMode) {
+          debugPrint('❌ Route not found: ${state.uri}');
+        }
         return Scaffold(
           appBar: AppBar(title: const Text('Page Not Found')),
           body: Center(
@@ -655,7 +530,4 @@ class AppRouter {
       },
     );
   }
-  
-  /// Helper method for string minimum length
-  static int min(int a, int b) => a < b ? a : b;
 }

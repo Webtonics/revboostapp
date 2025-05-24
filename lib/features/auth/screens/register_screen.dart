@@ -12,9 +12,11 @@ import 'package:revboostapp/widgets/common/loading_overlay.dart';
 
 class RegisterScreen extends StatefulWidget {
   // Add this callback parameter
-  final void Function()? onRegisterSuccess;
+  // final void Function()? onRegisterSuccess;
   
-  const RegisterScreen({Key? key, this.onRegisterSuccess}) : super(key: key);
+  const RegisterScreen({Key? key, 
+  // this.onRegisterSuccess
+  }) : super(key: key);
   
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -63,10 +65,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
         
         if (authStatus == AuthStatus.authenticated) {
           // Call the onRegisterSuccess callback if provided
-          if (widget.onRegisterSuccess != null) {
-            widget.onRegisterSuccess!();
-            debugPrint('Registration successful, callback executed');
-          }
+          // if (widget.onRegisterSuccess != null) {
+          //   widget.onRegisterSuccess!();
+          //   debugPrint('Registration successful, callback executed');
+          // }
           
           // Navigate to onboarding instead of splash
           context.go(AppRoutes.onboarding);

@@ -5,7 +5,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:revboostapp/core/services/feedback_service.dart';
 import 'package:revboostapp/core/services/email_service.dart';
 import 'package:revboostapp/models/feedback_model.dart';
-import 'package:revboostapp/widgets/layout/app_layout.dart';
 
 /// Displays the current user's business feedback from customers
 class BusinessFeedbackPage extends StatefulWidget {

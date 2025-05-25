@@ -1,11 +1,9 @@
 // lib/core/services/subscription_service.dart
 
 import 'dart:async';
-import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:revboostapp/models/subscription_model.dart';
 import 'package:universal_html/html.dart' as html;

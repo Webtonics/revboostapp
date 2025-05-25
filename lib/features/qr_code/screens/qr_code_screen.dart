@@ -1,5 +1,7 @@
 // lib/features/qr_code/screens/qr_code_screen.dart
 
+// ignore_for_file: unused_import
+
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;

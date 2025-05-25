@@ -780,7 +780,7 @@ class _NewReviewRequestDialogState extends State<NewReviewRequestDialog> {
           final isLoading = provider.status == ReviewRequestOperationStatus.loading;
           final hasError = provider.status == ReviewRequestOperationStatus.error;
           
-          return Container(
+          return SizedBox(
             width: 500, // Set a fixed width
             child: SingleChildScrollView(
               child: Padding(

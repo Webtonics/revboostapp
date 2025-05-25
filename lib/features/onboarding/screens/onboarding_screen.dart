@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
 import 'package:revboostapp/features/onboarding/models/onboarding_page_model.dart';
-import 'package:revboostapp/features/onboarding/services/onboarding_service.dart';
 import 'package:revboostapp/routing/app_router.dart';
 
 class OnboardingScreen extends StatefulWidget {

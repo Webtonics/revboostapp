@@ -553,7 +553,6 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:revboostapp/providers/dashboard_provider.dart';
 import 'package:revboostapp/routing/app_router.dart';
-import 'package:revboostapp/widgets/layout/app_layout.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);

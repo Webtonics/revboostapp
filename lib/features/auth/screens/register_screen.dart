@@ -10,6 +10,8 @@ import 'package:revboostapp/routing/app_router.dart';
 import 'package:revboostapp/widgets/common/app_button.dart';
 import 'package:revboostapp/widgets/common/loading_overlay.dart';
 
+import '../../../core/utils/utils/url_launch.dart';
+
 class RegisterScreen extends StatefulWidget {
   // Add this callback parameter
   // final void Function()? onRegisterSuccess;
@@ -269,10 +271,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             // Terms and conditions agreement
                             Row(
                               children: [
-                                Expanded(
-                                  child: Text(
-                                    'By registering, you agree to our Terms of Service and Privacy Policy',
-                                    style: Theme.of(context).textTheme.bodySmall,
+                                Text(
+                                      'By registering, you agree to our ',
+                                      style: Theme.of(context).textTheme.bodySmall,
+                                      textAlign: TextAlign.center,
+                                    ),
+                                GestureDetector(
+                                  onTap: () => launchMyUrl('https://revboostapp.com/terms-and-condition/'),
+                                  child: const Text(
+                                    'Terms of Service',
+                                    style:TextStyle(color: Color.fromARGB(255, 2, 57, 102),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                                Text(
+                                      ' and',
+                                      style: Theme.of(context).textTheme.bodySmall,
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    GestureDetector(
+                                  onTap: () => launchMyUrl('https://revboostapp.com/privacy-policy-2/'),
+                                  child: const Text(
+                                    ' Privacy Policy',
+                                    style:TextStyle(color: Color.fromARGB(255, 2, 57, 102),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600),
                                     textAlign: TextAlign.center,
                                   ),
                                 ),

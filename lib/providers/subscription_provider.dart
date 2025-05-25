@@ -149,7 +149,15 @@ class SubscriptionProvider with ChangeNotifier {
       _subscriptionService.openCheckoutUrl(url);
     }
   }
-  
+  Future<void> openBillingPortal() async {
+  try {
+    final url = await _subscriptionService.getCustomerPortalUrl();
+    _subscriptionService.openCheckoutUrl(url); // This method already exists and opens URLs in new tab
+  } catch (e) {
+    _errorMessage = 'Error opening billing portal: $e';
+    notifyListeners();
+  }
+}
   // Redirect to checkout (for web)
   void redirectToCheckout() {
     final url = getCheckoutUrl(redirect: true);

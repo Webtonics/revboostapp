@@ -65,7 +65,7 @@ class CurrentSubscriptionCard extends StatelessWidget {
                     onPressed: () async {
                       final url = await provider.getCustomerPortalUrl();
                       if (url != null) {
-                        provider.openCheckoutInNewTab();
+                         provider.openBillingPortal();
                       }
                     },
                     icon: const Icon(Icons.settings, size: 18),
@@ -154,7 +154,7 @@ class CurrentSubscriptionCard extends StatelessWidget {
                       onPressed: () async {
                         final url = await provider.getCustomerPortalUrl();
                         if (url != null) {
-                          provider.openCheckoutInNewTab();
+                           provider.openBillingPortal();
                         }
                       },
                     ),

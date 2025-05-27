@@ -1,4 +1,4 @@
-// lib/features/review_requests/services/review_request_service.dart
+// lib/core/services/review_request_service.dart - Updated with Page View Tracking
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
@@ -6,7 +6,7 @@ import 'package:revboostapp/core/services/email_service.dart';
 import 'package:revboostapp/models/review_request_model.dart';
 import 'package:uuid/uuid.dart';
 
-/// Service for managing review requests
+/// Service for managing review requests with enhanced tracking
 class ReviewRequestService {
   final FirebaseFirestore _firestore;
   final EmailService _emailService;
@@ -23,9 +23,7 @@ class ReviewRequestService {
   /// Access to the email service (for provider access)
   EmailService get emailService => _emailService;
   
-  /// Creates a new review request
-  /// 
-  /// Returns the ID of the created request
+  /// Creates a new review request with enhanced tracking
   Future<String> createReviewRequest({
     required String businessId,
     required String customerName,
@@ -37,14 +35,15 @@ class ReviewRequestService {
     try {
       debugPrint('Creating new review request for $customerEmail');
       
-      // Create a tracking ID for the request
+      // Create a unique tracking ID for this request
       final trackingId = _uuid.v4();
       
-      // Add tracking parameter to review link
+      // Add tracking parameters to review link
       final uri = Uri.parse(reviewLink);
       final updatedLink = uri.replace(queryParameters: {
         ...uri.queryParameters,
         'tracking_id': trackingId,
+        'source': 'email', // Mark this as coming from email
       }).toString();
       
       debugPrint('Generated tracking ID: $trackingId');
@@ -59,8 +58,12 @@ class ReviewRequestService {
         'createdAt': FieldValue.serverTimestamp(),
         'status': 'pending',
         'reviewLink': updatedLink,
-        'trackingId': trackingId,
-        'metadata': metadata,
+        'trackingId': trackingId, // Store tracking ID in the request
+        'metadata': {
+          'source': 'email',
+          'trackingId': trackingId,
+          ...metadata ?? {},
+        },
       };
       
       // Add to Firestore
@@ -74,9 +77,7 @@ class ReviewRequestService {
     }
   }
   
-  /// Sends a review request email
-  /// 
-  /// Returns `true` if the email was sent successfully
+  /// Sends a review request email with tracking
   Future<bool> sendReviewRequestEmail({
     required String requestId,
     required String customerName,
@@ -88,15 +89,16 @@ class ReviewRequestService {
     try {
       debugPrint('Sending review request email for ID: $requestId');
       
-      // Send the email
+      // Send the email with the tracking-enabled link
       final success = await _emailService.sendReviewRequest(
         toEmail: customerEmail,
         customerName: customerName,
         businessName: businessName,
-        reviewLink: reviewLink,
+        reviewLink: reviewLink, // This already contains tracking parameters
         replyTo: replyToEmail,
         customData: {
           'requestId': requestId,
+          'trackingEnabled': true,
         },
       );
       
@@ -168,7 +170,7 @@ class ReviewRequestService {
     }
   }
   
-  /// Gets a review request by tracking ID
+  /// Gets a review request by tracking ID (useful for connecting page views to requests)
   Future<ReviewRequestModel?> getReviewRequestByTrackingId(String trackingId) async {
     try {
       final snapshot = await _firestore
@@ -188,7 +190,7 @@ class ReviewRequestService {
     }
   }
   
-  /// Updates a review request when clicked
+  /// Updates a review request when the link is clicked (tracked via page views)
   Future<void> trackRequestClick(String requestId) async {
     try {
       await _firestore.collection(_collectionName).doc(requestId).update({
@@ -201,7 +203,7 @@ class ReviewRequestService {
     }
   }
   
-  /// Updates a review request when completed
+  /// Updates a review request when completed (called from page view tracking)
   Future<void> completeRequest({
     required String requestId,
     required int rating,
@@ -217,6 +219,44 @@ class ReviewRequestService {
     } catch (e) {
       debugPrint('Error completing request: $e');
       throw Exception('Failed to complete request: $e');
+    }
+  }
+  
+  /// Updates review request status based on tracking ID (for page view integration)
+  Future<void> updateRequestByTrackingId({
+    required String trackingId,
+    required String status,
+    int? rating,
+    String? feedback,
+  }) async {
+    try {
+      final snapshot = await _firestore
+          .collection(_collectionName)
+          .where('trackingId', isEqualTo: trackingId)
+          .limit(1)
+          .get();
+      
+      if (snapshot.docs.isNotEmpty) {
+        final docId = snapshot.docs.first.id;
+        final updateData = <String, dynamic>{
+          'status': status,
+        };
+        
+        if (status == 'clicked') {
+          updateData['clickedAt'] = FieldValue.serverTimestamp();
+        } else if (status == 'completed') {
+          updateData['completedAt'] = FieldValue.serverTimestamp();
+          if (rating != null) updateData['rating'] = rating;
+          if (feedback != null) updateData['feedback'] = feedback;
+        }
+        
+        await _firestore.collection(_collectionName).doc(docId).update(updateData);
+        debugPrint('Updated review request status via tracking ID: $trackingId -> $status');
+      } else {
+        debugPrint('No review request found with tracking ID: $trackingId');
+      }
+    } catch (e) {
+      debugPrint('Error updating request by tracking ID: $e');
     }
   }
   
@@ -245,15 +285,16 @@ class ReviewRequestService {
       
       final data = doc.data() as Map<String, dynamic>;
       
-      // Send the email
+      // Send the email (link already has tracking parameters)
       final success = await _emailService.sendReviewRequest(
         toEmail: data['customerEmail'],
         customerName: data['customerName'],
         businessName: businessName,
-        reviewLink: data['reviewLink'],
+        reviewLink: data['reviewLink'], // Already has tracking
         customData: {
           'requestId': requestId,
           'isResend': true,
+          'trackingId': data['trackingId'],
         },
       );
       
@@ -276,7 +317,7 @@ class ReviewRequestService {
     }
   }
   
-  /// Gets statistics for review requests
+  /// Gets statistics for review requests with enhanced tracking data
   Future<Map<String, dynamic>> getReviewRequestStatistics(String businessId) async {
     try {
       final snapshot = await _firestore
@@ -320,6 +361,21 @@ class ReviewRequestService {
         (req) => req.status == ReviewRequestStatus.completed
       ).length;
       
+      // Average response time calculation
+      double averageResponseHours = 0;
+      final completedWithTimes = requests
+          .where((req) => req.status == ReviewRequestStatus.completed && 
+                        req.sentAt != null && 
+                        req.completedAt != null)
+          .toList();
+      
+      if (completedWithTimes.isNotEmpty) {
+        final totalHours = completedWithTimes
+            .map((req) => req.completedAt!.difference(req.sentAt!).inHours)
+            .fold(0, (sum, hours) => sum + hours);
+        averageResponseHours = totalHours / completedWithTimes.length;
+      }
+      
       return {
         'total': total,
         'pending': pending,
@@ -331,6 +387,7 @@ class ReviewRequestService {
         'clickRate': clickRate,
         'completionRate': completionRate,
         'positiveRate': positiveRate,
+        'averageResponseHours': averageResponseHours,
         'recent': {
           'total': recentTotal,
           'completed': recentCompleted,
@@ -343,7 +400,7 @@ class ReviewRequestService {
     }
   }
   
-  /// Imports review requests from a CSV
+  /// Import review requests from CSV with tracking
   Future<Map<String, dynamic>> importReviewRequestsFromCsv({
     required String businessId,
     required List<Map<String, dynamic>> contacts,
@@ -374,14 +431,15 @@ class ReviewRequestService {
               continue;
             }
             
-            // Create a tracking ID
+            // Create a tracking ID for this import
             final trackingId = _uuid.v4();
             
-            // Add tracking parameter to review link
+            // Add tracking parameters to review link
             final uri = Uri.parse(reviewLink);
             final updatedLink = uri.replace(queryParameters: {
               ...uri.queryParameters,
               'tracking_id': trackingId,
+              'source': 'csv_import',
             }).toString();
             
             // Create the request object
@@ -399,6 +457,7 @@ class ReviewRequestService {
               'metadata': {
                 'importBatch': DateTime.now().toIso8601String(),
                 'source': 'csv_import',
+                'trackingId': trackingId,
               },
             };
             
@@ -430,7 +489,7 @@ class ReviewRequestService {
     }
   }
   
-  /// Bulk send review requests
+  /// Bulk send review requests with tracking
   Future<Map<String, dynamic>> bulkSendReviewRequests({
     required String businessId,
     required String businessName,
@@ -453,12 +512,17 @@ class ReviewRequestService {
           
           final data = doc.data() as Map<String, dynamic>;
           
-          // Send the email
+          // Send the email (tracking already embedded in link)
           final success = await _emailService.sendReviewRequest(
             toEmail: data['customerEmail'],
             customerName: data['customerName'],
             businessName: businessName,
-            reviewLink: data['reviewLink'],
+            reviewLink: data['reviewLink'], // Contains tracking
+            customData: {
+              'requestId': requestId,
+              'trackingId': data['trackingId'],
+              'bulkSend': true,
+            },
           );
           
           if (success) {

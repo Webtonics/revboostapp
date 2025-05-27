@@ -152,115 +152,232 @@ class AppRouter {
       debugLogDiagnostics: kDebugMode,
       
       /// Simplified redirect logic that focuses on core flows
+      // redirect: (context, state) async {
+      //   final currentPath = state.uri.path;
+      //   final now = DateTime.now();
+        
+      //   // Throttle redirects to prevent infinite loops
+      //   if (now.difference(_lastRedirectTime).inMilliseconds < 100) {
+      //     return null;
+      //   }
+      //   _lastRedirectTime = now;
+        
+      //   if (kDebugMode) {
+      //     debugPrint('🔄 Router redirect check: $currentPath');
+      //   }
+        
+      //   try {
+      //     // Always allow public routes and review pages
+      //     if (AppRoutes.publicRoutes.contains(currentPath) || 
+      //         AppRoutes.isPublicReviewRoute(currentPath)) {
+      //       if (kDebugMode) {
+      //         debugPrint('✅ Public route allowed: $currentPath');
+      //       }
+      //       return null;
+      //     }
+          
+      //     // Get auth state
+      //     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      //     final authStatus = authProvider.status;
+      //     final user = authProvider.user;
+          
+      //     if (kDebugMode) {
+      //       debugPrint('🔐 Auth status: $authStatus, User: ${user?.email}');
+      //     }
+          
+      //     // Handle authentication loading state
+      //     if (authStatus == AuthStatus.loading || authStatus == AuthStatus.initial) {
+      //       if (kDebugMode) {
+      //         debugPrint('⏳ Auth loading, staying on current route');
+      //       }
+      //       return null; // Stay on current route while loading
+      //     }
+          
+      //     // Handle unauthenticated users
+      //     if (authStatus != AuthStatus.authenticated || user == null) {
+      //       if (kDebugMode) {
+      //         debugPrint('❌ Not authenticated, redirecting to login');
+      //       }
+      //       return AppRoutes.login;
+      //     }
+          
+      //     // From here, user is authenticated
+      //     if (kDebugMode) {
+      //       debugPrint('✅ User authenticated: ${user.email}');
+      //       debugPrint('📧 Email verified: ${user.emailVerified}');
+      //       debugPrint('🏢 Setup completed: ${user.hasCompletedSetup}');
+      //     }
+          
+      //     // Handle business setup flow
+      //     if (!user.hasCompletedSetup) {
+      //       // Allow setup-related routes
+      //       if (currentPath == AppRoutes.onboarding || 
+      //           currentPath == AppRoutes.businessSetup ||
+      //           currentPath == AppRoutes.emailVerification) {
+      //         if (kDebugMode) {
+      //           debugPrint('✅ Setup route allowed: $currentPath');
+      //         }
+      //         return null;
+      //       }
+            
+      //       // Redirect to onboarding for any other route
+      //       if (kDebugMode) {
+      //         debugPrint('🔄 Setup not complete, redirecting to onboarding');
+      //       }
+      //       return AppRoutes.onboarding;
+      //     }
+          
+      //     // Handle subscription check for premium routes
+      //     if (AppRoutes.premiumRoutes.contains(currentPath)) {
+      //       final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+            
+      //       // Only check subscription if we have valid subscription data
+      //       if (subscriptionProvider.subscriptionStatus.isActive || 
+      //           subscriptionProvider.isFreeTrial) {
+      //         if (kDebugMode) {
+      //           debugPrint('✅ Premium route allowed: $currentPath');
+      //         }
+      //         return null;
+      //       } else {
+      //         if (kDebugMode) {
+      //           debugPrint('💰 No subscription, redirecting to subscription page');
+      //         }
+      //         return AppRoutes.subscription;
+      //       }
+      //     }
+          
+      //     // Allow all other authenticated routes
+      //     if (kDebugMode) {
+      //       debugPrint('✅ Route allowed: $currentPath');
+      //     }
+      //     return null;
+          
+      //   } catch (e) {
+      //     if (kDebugMode) {
+      //       debugPrint('❌ Router error: $e');
+      //     }
+      //     // On error, allow the route to prevent infinite redirects
+      //     return null;
+      //   }
+      // },
       redirect: (context, state) async {
-        final currentPath = state.uri.path;
-        final now = DateTime.now();
-        
-        // Throttle redirects to prevent infinite loops
-        if (now.difference(_lastRedirectTime).inMilliseconds < 100) {
-          return null;
-        }
-        _lastRedirectTime = now;
-        
+  final currentPath = state.uri.path;
+  final now = DateTime.now();
+  
+  // Throttle redirects to prevent infinite loops
+  if (now.difference(_lastRedirectTime).inMilliseconds < 100) {
+    return null;
+  }
+  _lastRedirectTime = now;
+  
+  if (kDebugMode) {
+    debugPrint('🔄 Router redirect check: $currentPath');
+  }
+  
+  try {
+    // Always allow public routes and review pages
+    if (AppRoutes.publicRoutes.contains(currentPath) || 
+        AppRoutes.isPublicReviewRoute(currentPath)) {
+      if (kDebugMode) {
+        debugPrint('✅ Public route allowed: $currentPath');
+      }
+      return null;
+    }
+    
+    // Get auth state
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final authStatus = authProvider.status;
+    final user = authProvider.user;
+    
+    if (kDebugMode) {
+      debugPrint('🔐 Auth status: $authStatus, User: ${user?.email}');
+    }
+    
+    // Handle authentication loading state
+    if (authStatus == AuthStatus.loading || authStatus == AuthStatus.initial) {
+      if (kDebugMode) {
+        debugPrint('⏳ Auth loading, staying on current route');
+      }
+      return null;
+    }
+    
+    // Handle unauthenticated users
+    if (authStatus != AuthStatus.authenticated || user == null) {
+      if (kDebugMode) {
+        debugPrint('❌ Not authenticated, redirecting to login');
+      }
+      return AppRoutes.login;
+    }
+    
+    // From here, user is authenticated
+    if (kDebugMode) {
+      debugPrint('✅ User authenticated: ${user.email}');
+      debugPrint('📧 Email verified: ${user.emailVerified}');
+      debugPrint('🏢 Setup completed: ${user.hasCompletedSetup}');
+    }
+    
+    // Handle business setup flow
+    if (!user.hasCompletedSetup) {
+      if (currentPath == AppRoutes.onboarding || 
+          currentPath == AppRoutes.businessSetup ||
+          currentPath == AppRoutes.emailVerification) {
         if (kDebugMode) {
-          debugPrint('🔄 Router redirect check: $currentPath');
+          debugPrint('✅ Setup route allowed: $currentPath');
         }
-        
-        try {
-          // Always allow public routes and review pages
-          if (AppRoutes.publicRoutes.contains(currentPath) || 
-              AppRoutes.isPublicReviewRoute(currentPath)) {
-            if (kDebugMode) {
-              debugPrint('✅ Public route allowed: $currentPath');
-            }
-            return null;
-          }
-          
-          // Get auth state
-          final authProvider = Provider.of<AuthProvider>(context, listen: false);
-          final authStatus = authProvider.status;
-          final user = authProvider.user;
-          
-          if (kDebugMode) {
-            debugPrint('🔐 Auth status: $authStatus, User: ${user?.email}');
-          }
-          
-          // Handle authentication loading state
-          if (authStatus == AuthStatus.loading || authStatus == AuthStatus.initial) {
-            if (kDebugMode) {
-              debugPrint('⏳ Auth loading, staying on current route');
-            }
-            return null; // Stay on current route while loading
-          }
-          
-          // Handle unauthenticated users
-          if (authStatus != AuthStatus.authenticated || user == null) {
-            if (kDebugMode) {
-              debugPrint('❌ Not authenticated, redirecting to login');
-            }
-            return AppRoutes.login;
-          }
-          
-          // From here, user is authenticated
-          if (kDebugMode) {
-            debugPrint('✅ User authenticated: ${user.email}');
-            debugPrint('📧 Email verified: ${user.emailVerified}');
-            debugPrint('🏢 Setup completed: ${user.hasCompletedSetup}');
-          }
-          
-          // Handle business setup flow
-          if (!user.hasCompletedSetup) {
-            // Allow setup-related routes
-            if (currentPath == AppRoutes.onboarding || 
-                currentPath == AppRoutes.businessSetup ||
-                currentPath == AppRoutes.emailVerification) {
-              if (kDebugMode) {
-                debugPrint('✅ Setup route allowed: $currentPath');
-              }
-              return null;
-            }
-            
-            // Redirect to onboarding for any other route
-            if (kDebugMode) {
-              debugPrint('🔄 Setup not complete, redirecting to onboarding');
-            }
-            return AppRoutes.onboarding;
-          }
-          
-          // Handle subscription check for premium routes
-          if (AppRoutes.premiumRoutes.contains(currentPath)) {
-            final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
-            
-            // Only check subscription if we have valid subscription data
-            if (subscriptionProvider.subscriptionStatus.isActive || 
-                subscriptionProvider.isFreeTrial) {
-              if (kDebugMode) {
-                debugPrint('✅ Premium route allowed: $currentPath');
-              }
-              return null;
-            } else {
-              if (kDebugMode) {
-                debugPrint('💰 No subscription, redirecting to subscription page');
-              }
-              return AppRoutes.subscription;
-            }
-          }
-          
-          // Allow all other authenticated routes
-          if (kDebugMode) {
-            debugPrint('✅ Route allowed: $currentPath');
-          }
-          return null;
-          
-        } catch (e) {
-          if (kDebugMode) {
-            debugPrint('❌ Router error: $e');
-          }
-          // On error, allow the route to prevent infinite redirects
-          return null;
-        }
-      },
+        return null;
+      }
       
+      if (kDebugMode) {
+        debugPrint('🔄 Setup not complete, redirecting to onboarding');
+      }
+      return AppRoutes.onboarding;
+    }
+    
+    // ENHANCED SUBSCRIPTION CHECK FOR PREMIUM ROUTES
+    if (AppRoutes.premiumRoutes.contains(currentPath)) {
+      final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+      
+      // Force refresh subscription status to check for trial expiry
+      await subscriptionProvider.refreshSubscriptionStatus();
+      
+      // Check if user has active access (subscription OR active trial)
+      final hasActiveAccess = subscriptionProvider.hasActiveAccess;
+      final isFreeTrial = subscriptionProvider.isFreeTrial;
+      final isSubscribed = subscriptionProvider.isSubscribed;
+      
+      if (kDebugMode) {
+        debugPrint('💰 Subscription check for premium route: $currentPath');
+        debugPrint('💰 Has active access: $hasActiveAccess');
+        debugPrint('💰 Is free trial: $isFreeTrial');
+        debugPrint('💰 Is subscribed: $isSubscribed');
+      }
+      
+      if (hasActiveAccess) {
+        if (kDebugMode) {
+          debugPrint('✅ Premium route allowed: $currentPath');
+        }
+        return null;
+      } else {
+        if (kDebugMode) {
+          debugPrint('💰 No active subscription/trial, redirecting to subscription page');
+        }
+        return AppRoutes.subscription;
+      }
+    }
+    
+    // Allow all other authenticated routes
+    if (kDebugMode) {
+      debugPrint('✅ Route allowed: $currentPath');
+    }
+    return null;
+    
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('❌ Router error: $e');
+    }
+    return null;
+  }
+},
       // Define all application routes
       routes: [
         // PUBLIC ROUTES

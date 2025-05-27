@@ -1,4 +1,4 @@
-// lib/core/services/subscription_service.dart
+// lib/core/services/subscription_service.dart - Fixed Version
 
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -8,7 +8,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:revboostapp/models/subscription_model.dart';
 import 'package:universal_html/html.dart' as html;
 
-/// Service for handling subscription-related operations
 class SubscriptionService {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
@@ -18,20 +17,18 @@ class SubscriptionService {
   final Duration _cacheDuration = const Duration(minutes: 5);
   
   // Lemon Squeezy store details
-  final String _storeId = '165054'; // Your store ID
-  final String _storeName = 'webtonics'; // Your store name
+  // final String _storeId = '165054';
+  final String _storeName = 'webtonics';
   final String _baseCheckoutUrl = 'https://webtonics.lemonsqueezy.com/buy';
 
-  
-  /// Creates a new [SubscriptionService] instance
   SubscriptionService({
     FirebaseFirestore? firestore,
     FirebaseAuth? auth,
   }) : 
     _firestore = firestore ?? FirebaseFirestore.instance,
     _auth = auth ?? FirebaseAuth.instance;
-  
-  /// Get the current user's subscription status
+
+  /// Get the current user's subscription status with automatic trial expiry check
   Future<SubscriptionStatus> getSubscriptionStatus({bool forceRefresh = false}) async {
     final userId = _auth.currentUser?.uid;
     if (userId == null) {
@@ -46,12 +43,14 @@ class SubscriptionService {
       
       if (DateTime.now().isBefore(expiryTime)) {
         debugPrint('Using cached subscription status');
-        return cachedData['data'] as SubscriptionStatus;
+        final status = cachedData['data'] as SubscriptionStatus;
+        // Still check trial expiry even for cached data
+        return await _checkAndUpdateTrialExpiry(status, userId);
       }
     }
     
     try {
-      // Get from Firestore with cache disabled to ensure fresh data
+      // Get from Firestore with cache disabled
       final userDoc = await _firestore.collection('users').doc(userId)
           .get(GetOptions(source: Source.server));
       
@@ -61,84 +60,154 @@ class SubscriptionService {
       
       final userData = userDoc.data()!;
       
-      // Check subscription status
-      final status = userData['subscriptionStatus'] as String?;
-      final isActive = status == 'active' || status == 'on_trial';
+      // Create initial status
+      final status = _createSubscriptionStatusFromData(userData);
       
-      // Check for free trial
-      final isFreeTrial = status == 'on_trial';
-      final trialEndDate = userData['trialEndDate'] != null
-          ? (userData['trialEndDate'] as Timestamp).toDate()
-          : null;
+      // Check and update trial expiry if needed
+      final finalStatus = await _checkAndUpdateTrialExpiry(status, userId);
       
-      // Handle the orderId properly - convert to string if needed
-      String? orderId;
-      if (userData['subscriptionOrderId'] != null) {
-        orderId = userData['subscriptionOrderId'].toString();
-      }
-      
-      final planId = userData['subscriptionPlanId'] as String?;
-      final expiresAt = userData['subscriptionEndDate'] != null
-          ? (userData['subscriptionEndDate'] as Timestamp).toDate()
-          : null;
-      
-      // Get customerId and ensure it's a string
-      String? customerId;
-      if (userData['lemonSqueezyCustomerId'] != null) {
-        customerId = userData['lemonSqueezyCustomerId'].toString();
-      }
-      
-      final subscriptionStatus = SubscriptionStatus(
-        isActive: isActive,
-        planId: planId,
-        expiresAt: expiresAt,
-        orderId: orderId,
-        customerId: customerId,
-        isFreeTrial: isFreeTrial,
-        trialEndDate: trialEndDate,
-      );
-      
-      // Cache the result with expiry time
+      // Cache the result
       _cache[cacheKey] = {
-        'data': subscriptionStatus,
+        'data': finalStatus,
         'expiryTime': DateTime.now().add(_cacheDuration),
       };
       
-      return subscriptionStatus;
+      return finalStatus;
     } catch (e) {
       debugPrint('Error loading subscription status: $e');
-      // Return cached version if available and there's an error
       if (_cache.containsKey(cacheKey)) {
         return _cache[cacheKey]['data'] as SubscriptionStatus;
       }
       return SubscriptionStatus.free();
     }
   }
-  
-  /// Start a free trial for the user
+
+  /// Create SubscriptionStatus from Firestore data
+  SubscriptionStatus _createSubscriptionStatusFromData(Map<String, dynamic> userData) {
+    final status = userData['subscriptionStatus'] as String?;
+    final isActive = status == 'active' || status == 'on_trial';
+    
+    // Check for free trial
+    final isFreeTrial = status == 'on_trial';
+    final trialEndDate = userData['trialEndDate'] != null
+        ? (userData['trialEndDate'] as Timestamp).toDate()
+        : null;
+    
+    String? orderId;
+    if (userData['subscriptionOrderId'] != null) {
+      orderId = userData['subscriptionOrderId'].toString();
+    }
+    
+    final planId = userData['subscriptionPlanId'] as String?;
+    final expiresAt = userData['subscriptionEndDate'] != null
+        ? (userData['subscriptionEndDate'] as Timestamp).toDate()
+        : null;
+    
+    String? customerId;
+    if (userData['lemonSqueezyCustomerId'] != null) {
+      customerId = userData['lemonSqueezyCustomerId'].toString();
+    }
+    
+    return SubscriptionStatus(
+      isActive: isActive,
+      planId: planId,
+      expiresAt: expiresAt,
+      orderId: orderId,
+      customerId: customerId,
+      isFreeTrial: isFreeTrial,
+      trialEndDate: trialEndDate,
+    );
+  }
+
+  /// Check if trial has expired and update database if needed
+  Future<SubscriptionStatus> _checkAndUpdateTrialExpiry(SubscriptionStatus status, String userId) async {
+    // Only check if user is currently on trial
+    if (!status.isFreeTrial || status.trialEndDate == null) {
+      return status;
+    }
+
+    final now = DateTime.now();
+    final isExpired = now.isAfter(status.trialEndDate!);
+
+    if (isExpired) {
+      debugPrint('Trial has expired for user $userId, updating database...');
+      
+      try {
+        // Update the user's subscription status to expired
+        await _firestore.collection('users').doc(userId).update({
+          'subscriptionStatus': 'trial_expired',
+          'trialExpiredAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+
+        // Clear cache so next call gets fresh data
+        _clearCache(userId);
+
+        // Return updated status
+        return SubscriptionStatus(
+          isActive: false, // Trial expired, no longer active
+          planId: status.planId,
+          expiresAt: status.expiresAt,
+          orderId: status.orderId,
+          customerId: status.customerId,
+          isFreeTrial: false, // No longer on trial
+          trialEndDate: status.trialEndDate,
+        );
+      } catch (e) {
+        debugPrint('Error updating expired trial: $e');
+        // If update fails, still return expired status for UI
+        return SubscriptionStatus(
+          isActive: false,
+          planId: status.planId,
+          expiresAt: status.expiresAt,
+          orderId: status.orderId,
+          customerId: status.customerId,
+          isFreeTrial: false,
+          trialEndDate: status.trialEndDate,
+        );
+      }
+    }
+
+    return status;
+  }
+
+  /// Start a free trial with enhanced validation
   Future<bool> startFreeTrial({required int trialDays}) async {
     final userId = _auth.currentUser?.uid;
     if (userId == null) {
+      debugPrint('Cannot start trial: No authenticated user');
       return false;
     }
     
     try {
-      // Check if user is eligible for trial (not previously subscribed)
+      // Get current user data
       final userDoc = await _firestore.collection('users').doc(userId).get();
       
       if (!userDoc.exists) {
+        debugPrint('Cannot start trial: User document not found');
         return false;
       }
       
       final userData = userDoc.data()!;
       
-      // If user already had a subscription or trial, don't allow new trial
-      if (userData['hasHadSubscription'] == true || 
-          userData['hasHadTrial'] == true) {
+      // Enhanced eligibility checks
+      final hasHadTrial = userData['hasHadTrial'] == true;
+      final hasHadSubscription = userData['hasHadSubscription'] == true;
+      final currentStatus = userData['subscriptionStatus'] as String?;
+      
+      // Check if user is eligible for trial
+      if (hasHadTrial || hasHadSubscription) {
+        debugPrint('User not eligible for trial: hasHadTrial=$hasHadTrial, hasHadSubscription=$hasHadSubscription');
+        return false;
+      }
+
+      // Check if user is already on a trial or subscription
+      if (currentStatus == 'on_trial' || currentStatus == 'active') {
+        debugPrint('User already has active subscription/trial: $currentStatus');
         return false;
       }
       
-      // Set trial data
+      // Start the trial
       final now = DateTime.now();
       final trialEndDate = now.add(Duration(days: trialDays));
       
@@ -153,11 +222,99 @@ class SubscriptionService {
       // Clear cache
       _clearCache(userId);
       
+      debugPrint('Free trial started successfully for user $userId');
+      debugPrint('Trial ends on: $trialEndDate');
+      
       return true;
     } catch (e) {
       debugPrint('Error starting free trial: $e');
       return false;
     }
+  }
+
+  /// Check if user is eligible for free trial
+  Future<bool> isEligibleForFreeTrial() async {
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) return false;
+    
+    try {
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      
+      if (!userDoc.exists) return false;
+      
+      final userData = userDoc.data()!;
+      
+      // User is eligible if they haven't had a trial or subscription
+      final hasHadTrial = userData['hasHadTrial'] == true;
+      final hasHadSubscription = userData['hasHadSubscription'] == true;
+      final currentStatus = userData['subscriptionStatus'] as String?;
+      
+      return !hasHadTrial && !hasHadSubscription && 
+             currentStatus != 'on_trial' && currentStatus != 'active';
+    } catch (e) {
+      debugPrint('Error checking trial eligibility: $e');
+      return false;
+    }
+  }
+
+  /// Get remaining trial time
+  Future<Duration?> getTrialTimeRemaining() async {
+    final status = await getSubscriptionStatus();
+    
+    if (!status.isFreeTrial || status.trialEndDate == null) {
+      return null;
+    }
+    
+    final now = DateTime.now();
+    if (now.isAfter(status.trialEndDate!)) {
+      return Duration.zero;
+    }
+    
+    return status.trialEndDate!.difference(now);
+  }
+
+  /// Get user's subscription history for eligibility checks
+  Future<Map<String, dynamic>> getUserSubscriptionHistory() async {
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) {
+      return {'hasHadTrial': false, 'hasHadSubscription': false};
+    }
+    
+    try {
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      
+      if (!userDoc.exists) {
+        return {'hasHadTrial': false, 'hasHadSubscription': false};
+      }
+      
+      final userData = userDoc.data()!;
+      
+      return {
+        'hasHadTrial': userData['hasHadTrial'] ?? false,
+        'hasHadSubscription': userData['hasHadSubscription'] ?? false,
+        'subscriptionStatus': userData['subscriptionStatus'],
+        'trialStartDate': userData['trialStartDate'],
+        'trialEndDate': userData['trialEndDate'],
+      };
+    } catch (e) {
+      debugPrint('Error getting user subscription history: $e');
+      return {'hasHadTrial': false, 'hasHadSubscription': false};
+    }
+  }
+
+  /// Check if trial is expired (this method is now properly integrated)
+  Future<bool> isTrialExpired() async {
+    final status = await getSubscriptionStatus(forceRefresh: true);
+    
+    if (!status.isFreeTrial) {
+      return false; // Not on trial
+    }
+    
+    if (status.trialEndDate == null) {
+      return true; // No end date specified
+    }
+    
+    return DateTime.now().isAfter(status.trialEndDate!);
   }
   
   /// Save customer ID for later use
@@ -641,34 +798,5 @@ class SubscriptionService {
     _cache.remove(cacheKey);
   }
   
-  /// For testing - check if trial is expired
-  Future<bool> isTrialExpired() async {
-    final status = await getSubscriptionStatus(forceRefresh: true);
-    
-    if (!status.isFreeTrial) {
-      return false; // Not on trial
-    }
-    
-    if (status.trialEndDate == null) {
-      return true; // No end date specified
-    }
-    
-    return DateTime.now().isAfter(status.trialEndDate!);
-  }
-  
-  /// For testing - check time remaining in trial
-  Future<Duration?> getTrialTimeRemaining() async {
-    final status = await getSubscriptionStatus();
-    
-    if (!status.isFreeTrial || status.trialEndDate == null) {
-      return null;
-    }
-    
-    final now = DateTime.now();
-    if (now.isAfter(status.trialEndDate!)) {
-      return Duration.zero;
-    }
-    
-    return status.trialEndDate!.difference(now);
-  }
+ 
 }

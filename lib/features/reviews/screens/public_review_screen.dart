@@ -1,5 +1,6 @@
 // lib/features/reviews/screens/public_review_screen.dart - Updated with Page View Tracking
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:revboostapp/core/services/email_service.dart';

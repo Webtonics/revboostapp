@@ -1,6 +1,5 @@
-// lib/features/reviews/screens/public_review_screen.dart - Updated with Page View Tracking
+// lib/features/reviews/screens/public_review_screen.dart - Premium Design
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:revboostapp/core/services/email_service.dart';
@@ -8,9 +7,14 @@ import 'package:revboostapp/core/services/firestore_service.dart';
 import 'package:revboostapp/core/services/page_view_service.dart';
 import 'package:revboostapp/models/business_model.dart';
 import 'package:revboostapp/providers/feedback_provider.dart';
-import 'package:revboostapp/widgets/common/loading_overlay.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:go_router/go_router.dart';
+import 'package:revboostapp/features/reviews/widgets/premium_business_header.dart';
+import 'package:revboostapp/features/reviews/widgets/premium_rating_widget.dart';
+import 'package:revboostapp/features/reviews/widgets/premium_feedback_widget.dart';
+import 'package:revboostapp/features/reviews/widgets/premium_contact_widget.dart';
+import 'package:revboostapp/features/reviews/widgets/premium_submit_button.dart';
+import 'package:revboostapp/features/reviews/widgets/premium_platform_selection.dart';
+import 'package:universal_html/html.dart' as html;
+import 'package:flutter/foundation.dart';
 
 class PublicReviewScreen extends StatefulWidget {
   final String businessId;
@@ -24,7 +28,8 @@ class PublicReviewScreen extends StatefulWidget {
   State<PublicReviewScreen> createState() => _PublicReviewScreenState();
 }
 
-class _PublicReviewScreenState extends State<PublicReviewScreen> {
+class _PublicReviewScreenState extends State<PublicReviewScreen>
+    with TickerProviderStateMixin {
   BusinessModel? _business;
   bool _isLoading = true;
   String? _errorMessage;
@@ -33,15 +38,23 @@ class _PublicReviewScreenState extends State<PublicReviewScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   bool _isSubmitting = false;
-  
-  // Page view tracking
+  final int _isSmallScreen = 900;
+
+  // Page view tracking (silent)
   final PageViewService _pageViewService = PageViewService();
   String? _trackingId;
   String _pageViewSource = 'direct';
 
+  // Animations
+  late AnimationController _slideController;
+  late AnimationController _fadeController;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+
   @override
   void initState() {
     super.initState();
+    _initAnimations();
     _extractTrackingInfo();
     _loadBusinessData();
   }
@@ -51,39 +64,61 @@ class _PublicReviewScreenState extends State<PublicReviewScreen> {
     _feedbackController.dispose();
     _nameController.dispose();
     _emailController.dispose();
+    _slideController.dispose();
+    _fadeController.dispose();
     super.dispose();
   }
 
-  /// Extract tracking information from URL parameters
+  void _initAnimations() {
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _slideController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOut,
+    ));
+  }
+
   void _extractTrackingInfo() {
-    final uri = GoRouterState.of(context).uri;
-    _trackingId = uri.queryParameters['tracking_id'];
-    
-    // Determine source based on URL parameters or referrer
-    if (uri.queryParameters.containsKey('source')) {
-      _pageViewSource = uri.queryParameters['source'] ?? 'direct';
-    } else if (_trackingId != null) {
-      _pageViewSource = 'email'; // Likely from email if tracking ID present
-    } else {
-      // Try to detect if it's from QR code vs direct link
-      // QR codes typically don't have referrers, while direct links might
-      try {
-        if (kIsWeb) {
-          final referrer = Uri.base.queryParameters['ref'] ?? '';
-          if (referrer.isEmpty) {
-            _pageViewSource = 'qr'; // Likely QR code scan
-          } else {
-            _pageViewSource = 'direct'; // Direct link with referrer
-          }
-        } else {
-          _pageViewSource = 'qr'; // Mobile is likely QR scan
-        }
-      } catch (e) {
-        _pageViewSource = 'direct'; // Fallback
+    try {
+      Map<String, String> queryParams = {};
+      
+      if (kIsWeb) {
+        final currentUrl = html.window.location.href;
+        final uri = Uri.parse(currentUrl);
+        queryParams = uri.queryParameters;
       }
+      
+      _trackingId = queryParams['tracking_id'];
+      
+      if (queryParams.containsKey('source')) {
+        _pageViewSource = queryParams['source'] ?? 'direct';
+      } else if (_trackingId != null && _trackingId!.isNotEmpty) {
+        _pageViewSource = 'email';
+      } else {
+        _pageViewSource = 'qr';
+      }
+    } catch (e) {
+      debugPrint('Error extracting tracking info: $e');
+      _pageViewSource = 'direct';
     }
-    
-    debugPrint('Page view source determined: $_pageViewSource, tracking ID: $_trackingId');
   }
 
   Future<void> _loadBusinessData() async {
@@ -102,8 +137,14 @@ class _PublicReviewScreenState extends State<PublicReviewScreen> {
           _isLoading = false;
         });
 
-        // Track page view after business is loaded
-        await _trackPageView();
+        // Start animations
+        _fadeController.forward();
+        Future.delayed(const Duration(milliseconds: 200), () {
+          _slideController.forward();
+        });
+
+        // Silently track page view
+        _trackPageView();
       } else {
         setState(() {
           _errorMessage = 'Business not found';
@@ -118,14 +159,10 @@ class _PublicReviewScreenState extends State<PublicReviewScreen> {
     }
   }
 
-  /// Track the page view
-  Future<void> _trackPageView() async {
+  void _trackPageView() async {
     if (_business == null) return;
 
     try {
-      debugPrint('🔍 Tracking page view for business: ${widget.businessId}');
-      debugPrint('🔍 Source: $_pageViewSource, Tracking ID: $_trackingId');
-      
       await _pageViewService.trackPageView(
         businessId: widget.businessId,
         source: _pageViewSource,
@@ -133,25 +170,21 @@ class _PublicReviewScreenState extends State<PublicReviewScreen> {
         metadata: {
           'businessName': _business!.name,
           'timestamp': DateTime.now().toIso8601String(),
-          'userAgent': kIsWeb ? 'web' : 'mobile',
         },
       );
-      
-      debugPrint('✅ Page view tracked successfully');
     } catch (e) {
-      debugPrint('❌ Error tracking page view: $e');
-      // Don't show error to user - this is background tracking
+      debugPrint('Page view tracking failed: $e');
     }
   }
 
   Future<void> _submitFeedback() async {
     if (_selectedRating == 0) {
-      _showErrorDialog('Please select a rating');
+      _showErrorSnackBar('Please select a rating');
       return;
     }
 
     if (_selectedRating <= 3 && _feedbackController.text.trim().isEmpty) {
-      _showErrorDialog('Please provide feedback to help us improve');
+      _showErrorSnackBar('Please provide feedback to help us improve');
       return;
     }
 
@@ -160,16 +193,14 @@ class _PublicReviewScreenState extends State<PublicReviewScreen> {
     });
 
     try {
-      // Get or create feedback provider
       final emailService = Provider.of<EmailService>(context, listen: false);
       final feedbackProvider = FeedbackProvider(
         emailService: emailService,
         businessId: widget.businessId,
         businessName: _business!.name,
-        businessEmail: null, // We don't have business email in this context
+        businessEmail: null,
       );
 
-      // Submit feedback
       final success = await feedbackProvider.submitFeedback(
         rating: _selectedRating.toDouble(),
         feedback: _feedbackController.text.trim(),
@@ -183,26 +214,28 @@ class _PublicReviewScreenState extends State<PublicReviewScreen> {
       );
 
       if (success) {
-        // Update page view completion
-        await _pageViewService.updatePageViewCompletion(
-          businessId: widget.businessId,
-          trackingId: _trackingId,
-          rating: _selectedRating.toDouble(),
-          completed: true,
-        );
+        // Silently update page view completion
+        try {
+          await _pageViewService.updatePageViewCompletion(
+            businessId: widget.businessId,
+            trackingId: _trackingId,
+            rating: _selectedRating.toDouble(),
+            completed: true,
+          );
+        } catch (e) {
+          debugPrint('Page view completion update failed: $e');
+        }
 
         if (_selectedRating >= 4) {
-          // Positive rating - redirect to review platforms
           _showPlatformSelection();
         } else {
-          // Negative rating - show thank you message
           _showThankYouMessage();
         }
       } else {
-        _showErrorDialog('Failed to submit feedback. Please try again.');
+        _showErrorSnackBar('Failed to submit feedback. Please try again.');
       }
     } catch (e) {
-      _showErrorDialog('Error submitting feedback: $e');
+      _showErrorSnackBar('Error submitting feedback: $e');
     } finally {
       setState(() {
         _isSubmitting = false;
@@ -214,97 +247,16 @@ class _PublicReviewScreenState extends State<PublicReviewScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Text('Thank you for the ${_selectedRating}-star rating! ⭐'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Would you mind sharing your experience publicly? '
-              'It really helps other customers find us!',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 16),
-            if (_business!.reviewLinks.isNotEmpty) ...[
-              Text(
-                'Choose where to leave your review:',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              ..._business!.reviewLinks.entries.map(
-                (entry) => _buildPlatformButton(entry.key, entry.value),
-              ).toList(),
-            ] else ...[
-              const Text('No review platforms configured for this business.'),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _showThankYouMessage();
-            },
-            child: const Text('Maybe Later'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPlatformButton(String platform, String url) {
-    IconData icon;
-    Color color;
-
-    switch (platform.toLowerCase()) {
-      case 'google':
-      case 'google business profile':
-        icon = Icons.business;
-        color = Colors.blue;
-        break;
-      case 'facebook':
-        icon = Icons.facebook;
-        color = Colors.indigo;
-        break;
-      case 'yelp':
-        icon = Icons.restaurant_menu;
-        color = Colors.red;
-        break;
-      case 'tripadvisor':
-        icon = Icons.travel_explore;
-        color = Colors.green;
-        break;
-      default:
-        icon = Icons.link;
-        color = Colors.grey;
-    }
-
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ElevatedButton.icon(
-        onPressed: () async {
-          try {
-            final uri = Uri.parse(url);
-            if (await canLaunchUrl(uri)) {
-              await launchUrl(uri, mode: LaunchMode.externalApplication);
-              Navigator.of(context).pop();
-              _showThankYouMessage();
-            } else {
-              _showErrorDialog('Could not open $platform');
-            }
-          } catch (e) {
-            _showErrorDialog('Error opening $platform: $e');
-          }
-        },
-        icon: Icon(icon, color: Colors.white),
-        label: Text('Review on $platform'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 12),
+      barrierColor: Colors.black54,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: PremiumPlatformSelection(
+          rating: _selectedRating,
+          reviewLinks: _business!.reviewLinks,
+          onSkip: () {
+            Navigator.of(context).pop();
+            _showThankYouMessage();
+          },
         ),
       ),
     );
@@ -314,149 +266,72 @@ class _PublicReviewScreenState extends State<PublicReviewScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('Thank You! 🙏'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.check_circle,
-              color: Colors.green,
-              size: 64,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Your feedback has been submitted successfully.',
-              style: Theme.of(context).textTheme.bodyLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'We appreciate you taking the time to share your experience with us!',
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              // Optionally navigate away or close the page
-            },
-            child: const Text('You\'re Welcome!'),
+      barrierColor: Colors.black54,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 400),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(25),
           ),
-        ],
-      ),
-    );
-  }
-
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Error'),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
-      body: LoadingOverlay(
-        isLoading: _isSubmitting,
-        message: 'Submitting your feedback...',
-        child: _buildBody(),
-      ),
-    );
-  }
-
-  Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading...'),
-          ],
-        ),
-      );
-    }
-
-    if (_errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Oops!',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _errorMessage!,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
+          child: Padding(
+            padding: const EdgeInsets.all(32),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const SizedBox(height: 20),
-                
-                // Business logo/header
-                _buildBusinessHeader(),
-                
-                const SizedBox(height: 32),
-                
-                // Rating section
-                _buildRatingSection(),
-                
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.green[100],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.check_circle_rounded,
+                    color: Colors.green[600],
+                    size: 50,
+                  ),
+                ),
                 const SizedBox(height: 24),
-                
-                // Feedback section (shown for ratings <= 3)
-                if (_selectedRating > 0 && _selectedRating <= 3) ...[
-                  _buildFeedbackSection(),
-                  const SizedBox(height: 24),
-                ],
-                
-                // Optional contact info (for all ratings)
-                if (_selectedRating > 0) ...[
-                  _buildContactSection(),
-                  const SizedBox(height: 32),
-                ],
-                
-                // Submit button
-                if (_selectedRating > 0) _buildSubmitButton(),
+                Text(
+                  'Thank You!',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Your feedback has been submitted successfully. We appreciate you taking the time to share your experience!',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey[600],
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[600],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'You\'re Welcome!',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -465,247 +340,184 @@ class _PublicReviewScreenState extends State<PublicReviewScreen> {
     );
   }
 
-  Widget _buildBusinessHeader() {
-    return Column(
-      children: [
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            color: Theme.of(context).primaryColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Icon(
-            Icons.business,
-            size: 40,
-            color: Theme.of(context).primaryColor,
-          ),
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red[600],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
         ),
-        const SizedBox(height: 16),
-        Text(
-          _business!.name,
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'How was your experience?',
-          style: Theme.of(context).textTheme.bodyLarge,
-          textAlign: TextAlign.center,
-        ),
-      ],
+        margin: const EdgeInsets.all(16),
+      ),
     );
   }
 
-  Widget _buildRatingSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        padding: MediaQuery.of(context).size.width >= _isSmallScreen ? const EdgeInsets.symmetric( horizontal: 150, ): const EdgeInsets.all(0),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Theme.of(context).primaryColor,
+              Theme.of(context).primaryColor.withOpacity(0.8),
+              Theme.of(context).primaryColor.withOpacity(0.6),
+            ],
+          ),
+        ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: _buildBody(),
+          ),
+        ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return Center(
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const CircularProgressIndicator(),
+            ),
+            const SizedBox(height: 24),
             Text(
-              'Rate your experience',
+              'Loading...',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(5, (index) {
-                final rating = index + 1;
-                return GestureDetector(
-                  onTap: () {
+          ],
+        ),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 600),
+          margin: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(25),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.error_outline_rounded,
+                size: 64,
+                color: Colors.red[400],
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Oops!',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _errorMessage!,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return SafeArea(
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: SlideTransition(
+          position: _slideAnimation,
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: EdgeInsets.symmetric(
+              horizontal: MediaQuery.of(context).size.width > 800 ? 48 : 24,
+              vertical: 24,
+            ),
+            child: Column(
+              children: [
+                // Business Header
+                PremiumBusinessHeader(business: _business!),
+                
+                SizedBox(height: MediaQuery.of(context).size.width > 800 ? 48 : 32),
+                
+                // Rating Widget
+                PremiumRatingWidget(
+                  selectedRating: _selectedRating,
+                  onRatingChanged: (rating) {
                     setState(() {
                       _selectedRating = rating;
                     });
                   },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: Icon(
-                      Icons.star,
-                      size: 48,
-                      color: rating <= _selectedRating
-                          ? Colors.amber
-                          : Colors.grey[300],
-                    ),
-                  ),
-                );
-              }),
-            ),
-            if (_selectedRating > 0) ...[
-              const SizedBox(height: 12),
-              Text(
-                _getRatingText(_selectedRating),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: _getRatingColor(_selectedRating),
-                  fontWeight: FontWeight.w500,
                 ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFeedbackSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Help us improve',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                
+                SizedBox(height: MediaQuery.of(context).size.width > 800 ? 48 : 32),
+                
+                // Feedback Widget (only for ratings 1-3)
+                if (_selectedRating > 0 && _selectedRating <= 3) ...[
+                  PremiumFeedbackWidget(
+                    feedbackController: _feedbackController,
+                  ),
+                  SizedBox(height: MediaQuery.of(context).size.width > 800 ? 48 : 32),
+                ],
+                
+                // Contact Widget (for all ratings)
+                if (_selectedRating > 0) ...[
+                  PremiumContactWidget(
+                    nameController: _nameController,
+                    emailController: _emailController,
+                  ),
+                  SizedBox(height: MediaQuery.of(context).size.width > 800 ? 48 : 32),
+                ],
+                
+                // Submit Button
+                if (_selectedRating > 0) ...[
+                  PremiumSubmitButton(
+                    isSubmitting: _isSubmitting,
+                    onPressed: _submitFeedback,
+                    text: _selectedRating >= 4 
+                        ? 'Submit & Leave Public Review' 
+                        : 'Submit Feedback',
+                  ),
+                ],
+                
+                SizedBox(height: MediaQuery.of(context).size.width > 800 ? 64 : 48),
+              ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              'We\'d love to hear your feedback so we can make things better.',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _feedbackController,
-              maxLines: 4,
-              decoration: const InputDecoration(
-                hintText: 'Tell us what we could do better...',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildContactSection() {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Contact info (optional)',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Leave your contact details if you\'d like us to follow up.',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                hintText: 'Your name',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                hintText: 'your.email@example.com',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSubmitButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: _isSubmitting ? null : _submitFeedback,
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
           ),
         ),
-        child: _isSubmitting
-            ? const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Text('Submitting...'),
-                ],
-              )
-            : Text(
-                _selectedRating >= 4 ? 'Submit & Leave Public Review' : 'Submit Feedback',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
       ),
     );
-  }
-
-  String _getRatingText(int rating) {
-    switch (rating) {
-      case 1:
-        return 'Poor';
-      case 2:
-        return 'Fair';
-      case 3:
-        return 'Good';
-      case 4:
-        return 'Very Good';
-      case 5:
-        return 'Excellent';
-      default:
-        return '';
-    }
-  }
-
-  Color _getRatingColor(int rating) {
-    switch (rating) {
-      case 1:
-      case 2:
-        return Colors.red;
-      case 3:
-        return Colors.orange;
-      case 4:
-      case 5:
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
   }
 }

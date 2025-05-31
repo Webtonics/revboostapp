@@ -19,8 +19,8 @@ class PremiumBusinessHeader extends StatelessWidget {
         children: [
           // Business Logo Container
           Container(
-            width: 120,
-            height: 120,
+            width: 60,
+            height: 60,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
@@ -43,14 +43,14 @@ class PremiumBusinessHeader extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(
+            child: const Icon(
               Icons.business_rounded,
-              size: 60,
+              size: 30,
               color: Colors.white,
             ),
           ),
           
-          const SizedBox(height: 32),
+          const SizedBox(height: 12),
           
           // Business Name
           Text(
@@ -64,7 +64,7 @@ class PremiumBusinessHeader extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           
           // Subtitle
           Container(
@@ -82,7 +82,7 @@ class PremiumBusinessHeader extends StatelessWidget {
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: Colors.white.withOpacity(0.9),
                 fontWeight: FontWeight.w500,
-                fontSize: 18,
+                fontSize: 16,
               ),
               textAlign: TextAlign.center,
             ),

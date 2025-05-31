@@ -387,14 +387,14 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.9),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const CircularProgressIndicator(),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 14),
             Text(
               'Loading...',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -411,8 +411,8 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
       return Center(
         child: Container(
           constraints: const BoxConstraints(maxWidth: 600),
-          margin: const EdgeInsets.all(24),
-          padding: const EdgeInsets.all(32),
+          margin: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(25),
@@ -429,10 +429,10 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
             children: [
               Icon(
                 Icons.error_outline_rounded,
-                size: 64,
+                size: MediaQuery.of(context).size.width>= 900? 64: 48,
                 color: Colors.red[400],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 14),
               Text(
                 'Oops!',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -460,7 +460,7 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
         child: SlideTransition(
           position: _slideAnimation,
           child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
+            // physics: const BouncingScrollPhysics(),
             padding: EdgeInsets.symmetric(
               horizontal: MediaQuery.of(context).size.width > 800 ? 48 : 24,
               vertical: 24,
@@ -469,8 +469,7 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
               children: [
                 // Business Header
                 PremiumBusinessHeader(business: _business!),
-                
-                SizedBox(height: MediaQuery.of(context).size.width > 800 ? 48 : 32),
+
                 
                 // Rating Widget
                 PremiumRatingWidget(
@@ -482,7 +481,7 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
                   },
                 ),
                 
-                SizedBox(height: MediaQuery.of(context).size.width > 800 ? 48 : 32),
+                SizedBox(height: MediaQuery.of(context).size.width > 800 ? 10 : 32),
                 
                 // Feedback Widget (only for ratings 1-3)
                 if (_selectedRating > 0 && _selectedRating <= 3) ...[

@@ -80,7 +80,7 @@ class _PremiumRatingWidgetState extends State<PremiumRatingWidget>
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24),
+      margin: const EdgeInsets.symmetric(horizontal: 1),
       padding:MediaQuery.of(context).size.width >= _isSmallScreen ? const EdgeInsets.all(40) : const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -139,7 +139,7 @@ class _PremiumRatingWidgetState extends State<PremiumRatingWidget>
                           ),
                           child: Icon(
                             isSelected ? Icons.star_rounded : Icons.star_outline_rounded,
-                            size: MediaQuery.of(context).size.width >= _isSmallScreen ? 50:20,
+                            size: MediaQuery.of(context).size.width >= _isSmallScreen ? 60:30,
                             color: isSelected
                                 ? Colors.amber[600]
                                 : Colors.grey[400],

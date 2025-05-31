@@ -41,7 +41,7 @@ class PremiumPlatformSelection extends StatelessWidget {
             ),
             child: Column(
               children: [
-                Icon(
+                const Icon(
                   Icons.star_rounded,
                   color: Colors.white,
                   size: 48,
@@ -71,9 +71,9 @@ class PremiumPlatformSelection extends StatelessWidget {
           // Platform buttons
           Container(
             padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: Colors.white,
-              borderRadius: const BorderRadius.only(
+              borderRadius: BorderRadius.only(
                 bottomLeft: Radius.circular(25),
                 bottomRight: Radius.circular(25),
               ),
@@ -180,17 +180,17 @@ class PremiumPlatformSelection extends StatelessWidget {
       case 'facebook':
         return {
           'icon': Icons.facebook_rounded,
-          'color': Color(0xFF4267B2),
+          'color': const Color(0xFF4267B2),
         };
       case 'yelp':
         return {
           'icon': Icons.restaurant_menu_rounded,
-          'color': Color(0xFFD32323),
+          'color': const Color(0xFFD32323),
         };
       case 'tripadvisor':
         return {
           'icon': Icons.travel_explore_rounded,
-          'color': Color(0xFF00AA6C),
+          'color': const Color(0xFF00AA6C),
         };
       default:
         return {

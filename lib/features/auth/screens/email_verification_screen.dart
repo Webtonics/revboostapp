@@ -182,7 +182,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       
       if (user != null) {
         // Check if business setup is completed
-        final hasCompletedSetup = user.hasCompletedSetup ?? false;
+        final hasCompletedSetup = user.hasCompletedSetup;
         
         if (hasCompletedSetup) {
           // If setup is complete, go to dashboard

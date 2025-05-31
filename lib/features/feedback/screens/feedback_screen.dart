@@ -36,52 +36,7 @@ class _BusinessFeedbackPageState extends State<BusinessFeedbackPage> {
     }
   }
 
-  /// Load business data and then load all feedback for that business
-  // Future<List<FeedbackModel>> _loadBusinessDataAndFeedback() async {
-  //   final user = FirebaseAuth.instance.currentUser;
-  //   if (user == null) {
-  //     throw Exception('User not authenticated');
-  //   }
-    
-  //   // Store user email for later use
-  //   _userEmail = user.email;
-    
-  //   // First get the user document to find business IDs
-  //   final userDoc = await FirebaseFirestore.instance
-  //       .collection('users')
-  //       .doc(user.uid)
-  //       .get();
-    
-  //   if (!userDoc.exists) {
-  //     throw Exception('User document not found');
-  //   }
-    
-  //   final userData = userDoc.data() as Map<String, dynamic>;
-    
-  //   // Get business IDs from user document
-  //   final businessIds = List<String>.from(userData['businessIds'] ?? []);
-    
-  //   if (businessIds.isEmpty) {
-  //     throw Exception('No businesses found for user');
-  //   }
-    
-  //   // Use the first business ID (most apps have one business per user)
-  //   _businessId = businessIds.first;
-    
-  //   // Get business details
-  //   final businessDoc = await FirebaseFirestore.instance
-  //       .collection('businesses')
-  //       .doc(_businessId)
-  //       .get();
-    
-  //   if (businessDoc.exists) {
-  //     final businessData = businessDoc.data() as Map<String, dynamic>;
-  //     _businessName = businessData['name'] as String?;
-  //   }
-    
-  //   // Now load the feedback for this business
-  //   return await _feedbackService.getFeedbackForBusinessOnce(_businessId!);
-  // }
+ 
 /// Load business data and then load all feedback for that business
 Future<List<FeedbackModel>> _loadBusinessDataAndFeedback() async {
   final user = FirebaseAuth.instance.currentUser;
@@ -397,16 +352,16 @@ Future<List<FeedbackModel>> _loadBusinessDataAndFeedback() async {
                     children: [
                       // Reply button
                       if (fb.customerEmail != null)
-                        TextButton.icon(
-                          icon: const Icon(Icons.reply, size: 18),
-                          label: const Text('Reply'),
-                          onPressed: () {
-                            // Implement reply functionality
-                          },
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          ),
-                        ),
+                        // TextButton.icon(
+                        //   icon: const Icon(Icons.reply, size: 18),
+                        //   label: const Text('Reply'),
+                        //   onPressed: () {
+                        //     // Implement reply functionality
+                        //   },
+                        //   style: TextButton.styleFrom(
+                        //     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        //   ),
+                        // ),
                       // Mark as reviewed or block button
                       if (fb.status == FeedbackStatus.submitted)
                         TextButton.icon(

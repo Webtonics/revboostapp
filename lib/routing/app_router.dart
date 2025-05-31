@@ -508,7 +508,7 @@ class AppRouter {
               path: AppRoutes.dashboard,
               pageBuilder: (context, state) => CustomTransitionPage(
                 key: state.pageKey,
-                child: const DashboardScreen(),
+                child: const EnhancedDashboardScreen(),
                 transitionsBuilder: (context, animation, secondaryAnimation, child) {
                   return FadeTransition(opacity: animation, child: child);
                 },

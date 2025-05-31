@@ -1,4 +1,4 @@
-// lib/features/reviews/screens/public_review_screen.dart - Premium Design
+// lib/features/reviews/screens/public_review_screen.dart - Fixed with proper tracking
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -40,10 +40,12 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
   bool _isSubmitting = false;
   final int _isSmallScreen = 900;
 
-  // Page view tracking (silent)
+  // Enhanced page view tracking
   final PageViewService _pageViewService = PageViewService();
   String? _trackingId;
   String _pageViewSource = 'direct';
+  bool _hasTrackedPageView = false;
+  String? _sessionId;
 
   // Animations
   late AnimationController _slideController;
@@ -55,6 +57,7 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
   void initState() {
     super.initState();
     _initAnimations();
+    _generateSessionId();
     _extractTrackingInfo();
     _loadBusinessData();
   }
@@ -96,6 +99,11 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
     ));
   }
 
+  void _generateSessionId() {
+    // Generate a unique session ID for this visit
+    _sessionId = DateTime.now().millisecondsSinceEpoch.toString();
+  }
+
   void _extractTrackingInfo() {
     try {
       Map<String, String> queryParams = {};
@@ -104,17 +112,42 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
         final currentUrl = html.window.location.href;
         final uri = Uri.parse(currentUrl);
         queryParams = uri.queryParameters;
+        
+        debugPrint('Current URL: $currentUrl');
+        debugPrint('Query parameters: $queryParams');
       }
       
       _trackingId = queryParams['tracking_id'];
       
+      // Determine source more accurately
       if (queryParams.containsKey('source')) {
         _pageViewSource = queryParams['source'] ?? 'direct';
       } else if (_trackingId != null && _trackingId!.isNotEmpty) {
         _pageViewSource = 'email';
+      } else if (queryParams.containsKey('ref')) {
+        _pageViewSource = queryParams['ref'] ?? 'link';
       } else {
-        _pageViewSource = 'qr';
+        // Check referrer to determine if it's from QR code or direct
+        if (kIsWeb) {
+          try {
+            final referrer = html.document.referrer;
+            if (referrer.isEmpty) {
+              _pageViewSource = 'qr'; // Likely QR code if no referrer
+            } else {
+              _pageViewSource = 'direct';
+            }
+          } catch (e) {
+            _pageViewSource = 'direct';
+          }
+        } else {
+          _pageViewSource = 'qr'; // Mobile app context likely means QR
+        }
       }
+      
+      debugPrint('Extracted tracking info:');
+      debugPrint('  - Tracking ID: $_trackingId');
+      debugPrint('  - Source: $_pageViewSource');
+      debugPrint('  - Session ID: $_sessionId');
     } catch (e) {
       debugPrint('Error extracting tracking info: $e');
       _pageViewSource = 'direct';
@@ -143,8 +176,8 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
           _slideController.forward();
         });
 
-        // Silently track page view
-        _trackPageView();
+        // Track page view immediately after business is loaded
+        await _trackPageView();
       } else {
         setState(() {
           _errorMessage = 'Business not found';
@@ -159,21 +192,36 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
     }
   }
 
-  void _trackPageView() async {
-    if (_business == null) return;
+  Future<void> _trackPageView() async {
+    if (_business == null || _hasTrackedPageView) return;
 
     try {
+      debugPrint('🔍 Tracking page view...');
+      debugPrint('  - Business ID: ${widget.businessId}');
+      debugPrint('  - Business Name: ${_business!.name}');
+      debugPrint('  - Source: $_pageViewSource');
+      debugPrint('  - Tracking ID: $_trackingId');
+      debugPrint('  - Session ID: $_sessionId');
+
       await _pageViewService.trackPageView(
         businessId: widget.businessId,
         source: _pageViewSource,
         trackingId: _trackingId,
         metadata: {
           'businessName': _business!.name,
+          'sessionId': _sessionId,
           'timestamp': DateTime.now().toIso8601String(),
+          'userAgent': kIsWeb ? html.window.navigator.userAgent : 'mobile_app',
+          'platform': kIsWeb ? 'web' : 'mobile',
+          'url': kIsWeb ? html.window.location.href : 'mobile_app',
         },
       );
+
+      _hasTrackedPageView = true;
+      debugPrint('✅ Page view tracked successfully');
     } catch (e) {
-      debugPrint('Page view tracking failed: $e');
+      debugPrint('❌ Page view tracking failed: $e');
+      // Don't fail the page load if tracking fails
     }
   }
 
@@ -193,6 +241,8 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
     });
 
     try {
+      debugPrint('🔄 Submitting feedback...');
+      
       final emailService = Provider.of<EmailService>(context, listen: false);
       final feedbackProvider = FeedbackProvider(
         emailService: emailService,
@@ -209,12 +259,16 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
         metadata: {
           'source': _pageViewSource,
           'trackingId': _trackingId,
+          'sessionId': _sessionId,
           'submittedVia': 'public_review_page',
+          'timestamp': DateTime.now().toIso8601String(),
         },
       );
 
       if (success) {
-        // Silently update page view completion
+        debugPrint('✅ Feedback submitted successfully');
+        
+        // Update page view completion tracking
         try {
           await _pageViewService.updatePageViewCompletion(
             businessId: widget.businessId,
@@ -222,8 +276,9 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
             rating: _selectedRating.toDouble(),
             completed: true,
           );
+          debugPrint('✅ Page view completion updated');
         } catch (e) {
-          debugPrint('Page view completion update failed: $e');
+          debugPrint('❌ Page view completion update failed: $e');
         }
 
         if (_selectedRating >= 4) {
@@ -235,6 +290,7 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
         _showErrorSnackBar('Failed to submit feedback. Please try again.');
       }
     } catch (e) {
+      debugPrint('❌ Error submitting feedback: $e');
       _showErrorSnackBar('Error submitting feedback: $e');
     } finally {
       setState(() {
@@ -358,7 +414,9 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        padding: MediaQuery.of(context).size.width >= _isSmallScreen ? const EdgeInsets.symmetric( horizontal: 150, ): const EdgeInsets.all(0),
+        padding: MediaQuery.of(context).size.width >= _isSmallScreen 
+            ? const EdgeInsets.symmetric(horizontal: 150) 
+            : const EdgeInsets.all(0),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -387,14 +445,14 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.9),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const CircularProgressIndicator(),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 24),
             Text(
               'Loading...',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -411,8 +469,8 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
       return Center(
         child: Container(
           constraints: const BoxConstraints(maxWidth: 600),
-          margin: const EdgeInsets.all(14),
-          padding: const EdgeInsets.all(12),
+          margin: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(25),
@@ -429,10 +487,10 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
             children: [
               Icon(
                 Icons.error_outline_rounded,
-                size: MediaQuery.of(context).size.width>= 900? 64: 48,
+                size: 64,
                 color: Colors.red[400],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 24),
               Text(
                 'Oops!',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -460,7 +518,7 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
         child: SlideTransition(
           position: _slideAnimation,
           child: SingleChildScrollView(
-            // physics: const BouncingScrollPhysics(),
+            physics: const BouncingScrollPhysics(),
             padding: EdgeInsets.symmetric(
               horizontal: MediaQuery.of(context).size.width > 800 ? 48 : 24,
               vertical: 24,
@@ -469,7 +527,8 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
               children: [
                 // Business Header
                 PremiumBusinessHeader(business: _business!),
-
+                
+                SizedBox(height: MediaQuery.of(context).size.width > 800 ? 48 : 32),
                 
                 // Rating Widget
                 PremiumRatingWidget(
@@ -481,7 +540,7 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
                   },
                 ),
                 
-                SizedBox(height: MediaQuery.of(context).size.width > 800 ? 10 : 32),
+                SizedBox(height: MediaQuery.of(context).size.width > 800 ? 48 : 32),
                 
                 // Feedback Widget (only for ratings 1-3)
                 if (_selectedRating > 0 && _selectedRating <= 3) ...[

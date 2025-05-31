@@ -56,7 +56,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      await OnboardingService.resetOnboardingStatus();
+      // await OnboardingService.resetOnboardingStatus();
       await Provider.of<AuthProvider>(context, listen: false).signUp(
         _emailController.text.trim(),
         _passwordController.text,

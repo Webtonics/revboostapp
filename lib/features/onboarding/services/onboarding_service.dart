@@ -163,23 +163,23 @@ class OnboardingService {
   }
   
   /// Reset onboarding and business setup status (for testing or account reset)
-  static Future<void> resetOnboardingStatus() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_onboardingCompletedKey, false);
-      await prefs.setBool(_businessSetupCompletedKey, false);
+  // static Future<void> resetOnboardingStatus() async {
+  //   try {
+  //     final prefs = await SharedPreferences.getInstance();
+  //     await prefs.setBool(_onboardingCompletedKey, false);
+  //     await prefs.setBool(_businessSetupCompletedKey, false);
       
-      // Also update Firestore
-      final user = _auth.currentUser;
-      if (user != null) {
-        await _firestore.collection('users').doc(user.uid).update({
-          'hasCompletedOnboarding': false,
-          'hasCompletedSetup': false,
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-      }
-    } catch (e) {
-      debugPrint('Error resetting onboarding status: $e');
-    }
-  }
+  //     // Also update Firestore
+  //     final user = _auth.currentUser;
+  //     if (user != null) {
+  //       await _firestore.collection('users').doc(user.uid).update({
+  //         'hasCompletedOnboarding': false,
+  //         'hasCompletedSetup': false,
+  //         'updatedAt': FieldValue.serverTimestamp(),
+  //       });
+  //     }
+  //   } catch (e) {
+  //     debugPrint('Error resetting onboarding status: $e');
+  //   }
+  // }
 }

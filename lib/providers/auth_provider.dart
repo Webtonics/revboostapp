@@ -6,6 +6,8 @@ import 'package:revboostapp/core/services/auth_service.dart';
 import 'package:revboostapp/core/services/firestore_service.dart';
 import 'package:revboostapp/models/user_model.dart';
 
+import '../core/utils/auth_error_handler.dart';
+
 enum AuthStatus { initial, authenticated, unauthenticated, loading, error }
 
 class AuthProvider with ChangeNotifier {
@@ -17,6 +19,7 @@ class AuthProvider with ChangeNotifier {
   UserModel? _user;
   String? _errorMessage;
   String? _errorCode;
+  String? _errorSuggestion;
   
   // Flags to prevent race conditions
   bool _isProcessingAuth = false;
@@ -34,6 +37,7 @@ class AuthProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
   String? get errorCode => _errorCode;
   bool get isAuthenticated => _status == AuthStatus.authenticated;
+  String? get errorSuggestion => _errorSuggestion;
   
   // Constructor
   AuthProvider() {
@@ -75,6 +79,46 @@ class AuthProvider with ChangeNotifier {
     }
   }
   
+  void _handleError(dynamic error, [String prefix = '']) {
+    // Use the enhanced error handler
+    _errorMessage = AuthErrorHandler.getReadableAuthError(error);
+    _errorSuggestion = AuthErrorHandler.getErrorSuggestion(error);
+    
+    // Apply prefix if provided
+    if (prefix.isNotEmpty && _errorMessage != null) {
+      _errorMessage = prefix + _errorMessage!;
+    }
+    
+    // Extract error code for debugging (keep for internal use)
+    if (error is FirebaseAuthException) {
+      _errorCode = error.code;
+    } else {
+      _errorCode = 'unknown';
+    }
+    
+    if (kDebugMode) {
+      debugPrint('❌ Auth error: $_errorMessage (code: $_errorCode)');
+      if (_errorSuggestion != null) {
+        debugPrint('💡 Suggestion: $_errorSuggestion');
+      }
+    }
+  }
+   void clearError() {
+    _errorMessage = null;
+    _errorCode = null;
+    _errorSuggestion = null;
+    notifyListeners();
+  }
+
+  /// Check if current error is network-related
+  bool get isNetworkError {
+    return _errorCode != null && AuthErrorHandler.isNetworkError(_errorCode);
+  }
+  
+  /// Check if error requires user action
+  bool get requiresUserAction {
+    return _errorCode != null && AuthErrorHandler.requiresUserAction(_errorCode);
+  }
   /// Handle auth state changes from Firebase
   Future<void> _handleAuthStateChange(User? user) async {
     if (kDebugMode) {
@@ -245,14 +289,15 @@ class AuthProvider with ChangeNotifier {
       _status = AuthStatus.loading;
       _errorMessage = null;
       _errorCode = null;
+      _errorSuggestion = null; // Clear suggestion
       notifyListeners();
       
       if (kDebugMode) {
         debugPrint('🔐 Attempting to sign in with email: $email');
       }
       
-      // Validate input
-      if (email.isEmpty) {
+      // Enhanced input validation with user-friendly messages
+      if (email.trim().isEmpty) {
         throw Exception('Please enter your email address');
       }
       
@@ -260,12 +305,20 @@ class AuthProvider with ChangeNotifier {
         throw Exception('Please enter your password');
       }
       
+      // Basic email format validation
+      if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email.trim())) {
+        throw Exception('Please enter a valid email address');
+      }
+      
       // Authenticate with Firebase
-      final userCredential = await _authService.signInWithEmailAndPassword(email, password);
+      final userCredential = await _authService.signInWithEmailAndPassword(
+        email.trim(), 
+        password
+      );
       final user = userCredential.user;
       
       if (user == null) {
-        throw Exception('Login failed - no user returned');
+        throw Exception('Sign in failed. Please try again');
       }
       
       if (kDebugMode) {
@@ -289,6 +342,7 @@ class AuthProvider with ChangeNotifier {
       _status = AuthStatus.authenticated;
       _errorMessage = null;
       _errorCode = null;
+      _errorSuggestion = null;
       
       if (kDebugMode) {
         debugPrint('🎉 Sign in completed successfully');
@@ -311,7 +365,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
   
-  /// Sign up with email and password
+  // Enhanced sign up method with better error handling
   Future<void> signUp(String email, String password, String displayName) async {
     if (_isProcessingAuth) {
       if (kDebugMode) {
@@ -325,14 +379,15 @@ class AuthProvider with ChangeNotifier {
       _status = AuthStatus.loading;
       _errorMessage = null;
       _errorCode = null;
+      _errorSuggestion = null;
       notifyListeners();
       
       if (kDebugMode) {
         debugPrint('📝 Attempting to sign up with email: $email');
       }
       
-      // Validate input
-      if (email.isEmpty) {
+      // Enhanced input validation
+      if (email.trim().isEmpty) {
         throw Exception('Please enter your email address');
       }
       
@@ -340,16 +395,29 @@ class AuthProvider with ChangeNotifier {
         throw Exception('Please enter a password');
       }
       
-      if (displayName.isEmpty) {
-        throw Exception('Please enter your name');
+      if (displayName.trim().isEmpty) {
+        throw Exception('Please enter your full name');
+      }
+      
+      // Email format validation
+      if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email.trim())) {
+        throw Exception('Please enter a valid email address');
+      }
+      
+      // Password strength validation
+      if (password.length < 8) {
+        throw Exception('Password must be at least 8 characters long');
       }
       
       // Create account
-      final userCredential = await _authService.createUserWithEmailAndPassword(email, password);
+      final userCredential = await _authService.createUserWithEmailAndPassword(
+        email.trim(), 
+        password
+      );
       final user = userCredential.user;
       
       if (user == null) {
-        throw Exception('Registration failed - no user returned');
+        throw Exception('Account creation failed. Please try again');
       }
       
       if (kDebugMode) {
@@ -357,7 +425,7 @@ class AuthProvider with ChangeNotifier {
       }
       
       // Update display name
-      await _authService.updateUserProfile(displayName: displayName);
+      await _authService.updateUserProfile(displayName: displayName.trim());
       
       // Send email verification
       await user.sendEmailVerification();
@@ -368,10 +436,11 @@ class AuthProvider with ChangeNotifier {
       // Create user document
       await _createUserDocument(user);
       
-      // Set authenticated status (even without email verification)
+      // Set authenticated status
       _status = AuthStatus.authenticated;
       _errorMessage = null;
       _errorCode = null;
+      _errorSuggestion = null;
       
       if (kDebugMode) {
         debugPrint('🎉 Sign up completed successfully');
@@ -394,6 +463,27 @@ class AuthProvider with ChangeNotifier {
     }
   }
   
+  // Enhanced reset password method
+  Future<void> resetPassword(String email) async {
+    try {
+      if (email.trim().isEmpty) {
+        throw Exception('Please enter your email address');
+      }
+      
+      if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email.trim())) {
+        throw Exception('Please enter a valid email address');
+      }
+      
+      await _authService.sendPasswordResetEmail(email.trim());
+      
+      if (kDebugMode) {
+        debugPrint('📧 Password reset email sent to: $email');
+      }
+    } catch (e) {
+      _handleError(e);
+      rethrow;
+    }
+  }
   /// Sign out
   Future<void> signOut() async {
     try {
@@ -416,24 +506,6 @@ class AuthProvider with ChangeNotifier {
       _status = AuthStatus.error;
       _handleError(e);
       notifyListeners();
-      rethrow;
-    }
-  }
-  
-  /// Reset password
-  Future<void> resetPassword(String email) async {
-    try {
-      if (email.isEmpty) {
-        throw Exception('Please enter your email address');
-      }
-      
-      await _authService.sendPasswordResetEmail(email);
-      
-      if (kDebugMode) {
-        debugPrint('📧 Password reset email sent to: $email');
-      }
-    } catch (e) {
-      _handleError(e);
       rethrow;
     }
   }
@@ -665,82 +737,82 @@ class AuthProvider with ChangeNotifier {
   }
   
   /// Handle errors with user-friendly messages
-  void _handleError(dynamic error, [String prefix = '']) {
-    _errorCode = _extractErrorCode(error);
-    _errorMessage = _getUserFriendlyErrorMessage(_errorCode);
+  // void _handleError(dynamic error, [String prefix = '']) {
+  //   _errorCode = _extractErrorCode(error);
+  //   _errorMessage = _getUserFriendlyErrorMessage(_errorCode);
     
-    if (_errorMessage == null) {
-      _errorMessage = prefix + error.toString();
-    } else if (prefix.isNotEmpty) {
-      _errorMessage = prefix + _errorMessage!;
-    }
+  //   if (_errorMessage == null) {
+  //     _errorMessage = prefix + error.toString();
+  //   } else if (prefix.isNotEmpty) {
+  //     _errorMessage = prefix + _errorMessage!;
+  //   }
     
-    if (kDebugMode) {
-      debugPrint('❌ Auth error: $_errorMessage (code: $_errorCode)');
-    }
-  }
+  //   if (kDebugMode) {
+  //     debugPrint('❌ Auth error: $_errorMessage (code: $_errorCode)');
+  //   }
+  // }
   
-  /// Extract Firebase error code
-  String? _extractErrorCode(dynamic error) {
-    if (error is FirebaseAuthException) {
-      return error.code;
-    } else if (error is String && error.contains('firebase_auth/')) {
-      final RegExp regExp = RegExp(r'firebase_auth\/([\w-]+)');
-      final match = regExp.firstMatch(error);
-      if (match != null && match.groupCount >= 1) {
-        return match.group(1);
-      }
-    }
-    return null;
-  }
+  // /// Extract Firebase error code
+  // // String? _extractErrorCode(dynamic error) {
+  // //   if (error is FirebaseAuthException) {
+  // //     return error.code;
+  // //   } else if (error is String && error.contains('firebase_auth/')) {
+  // //     final RegExp regExp = RegExp(r'firebase_auth\/([\w-]+)');
+  // //     final match = regExp.firstMatch(error);
+  // //     if (match != null && match.groupCount >= 1) {
+  // //       return match.group(1);
+  // //     }
+  // //   }
+  // //   return null;
+  // // }
   
-  /// Get user-friendly error messages
-  String? _getUserFriendlyErrorMessage(String? errorCode) {
-    if (errorCode == null) return null;
+  // // /// Get user-friendly error messages
+  // // String? _getUserFriendlyErrorMessage(String? errorCode) {
+  //   if (errorCode == null) return null;
     
-    switch (errorCode) {
-      // Sign in errors
-      case 'invalid-email':
-        return 'Please enter a valid email address';
-      case 'user-disabled':
-        return 'This account has been disabled. Please contact support';
-      case 'user-not-found':
-        return 'No account found with this email. Please check or create a new account';
-      case 'wrong-password':
-        return 'Incorrect password. Please try again or reset your password';
-      case 'invalid-credential':
-        return 'Invalid login credentials. Please check your email and password';
-      case 'invalid-verification-code':
-        return 'Invalid verification code';
-      case 'invalid-verification-id':
-        return 'Invalid verification ID';
+  //   switch (errorCode) {
+  //     // Sign in errors
+  //     case 'invalid-email':
+  //       return 'Please enter a valid email address';
+  //     case 'user-disabled':
+  //       return 'This account has been disabled. Please contact support';
+  //     case 'user-not-found':
+  //       return 'No account found with this email. Please check or create a new account';
+  //     case 'wrong-password':
+  //       return 'Incorrect password. Please try again or reset your password';
+  //     case 'invalid-credential':
+  //       return 'Invalid login credentials. Please check your email and password';
+  //     case 'invalid-verification-code':
+  //       return 'Invalid verification code';
+  //     case 'invalid-verification-id':
+  //       return 'Invalid verification ID';
         
-      // Sign up errors
-      case 'email-already-in-use':
-        return 'An account already exists with this email address';
-      case 'operation-not-allowed':
-        return 'This operation is not allowed. Please contact support';
-      case 'weak-password':
-        return 'Your password is too weak. Please use a stronger password';
+  //     // Sign up errors
+  //     case 'email-already-in-use':
+  //       return 'An account already exists with this email address';
+  //     case 'operation-not-allowed':
+  //       return 'This operation is not allowed. Please contact support';
+  //     case 'weak-password':
+  //       return 'Your password is too weak. Please use a stronger password';
         
-      // Reset password errors
-      case 'missing-email':
-        return 'Please provide an email address';
-      case 'expired-action-code':
-        return 'The password reset link has expired. Please request a new one';
-      case 'invalid-action-code':
-        return 'The password reset link is invalid. Please request a new one';
+  //     // Reset password errors
+  //     case 'missing-email':
+  //       return 'Please provide an email address';
+  //     case 'expired-action-code':
+  //       return 'The password reset link has expired. Please request a new one';
+  //     case 'invalid-action-code':
+  //       return 'The password reset link is invalid. Please request a new one';
         
-      // Network errors
-      case 'network-request-failed':
-        return 'Network error. Please check your internet connection and try again';
-      case 'too-many-requests':
-        return 'Too many unsuccessful attempts. Please try again later';
-      case 'timeout':
-        return 'Request timeout. Please check your internet connection and try again';
+  //     // Network errors
+  //     case 'network-request-failed':
+  //       return 'Network error. Please check your internet connection and try again';
+  //     case 'too-many-requests':
+  //       return 'Too many unsuccessful attempts. Please try again later';
+  //     case 'timeout':
+  //       return 'Request timeout. Please check your internet connection and try again';
         
-      default:
-        return null;
-    }
-  }
+  //     default:
+  //       return null;
+  //   }
+  // }
 }

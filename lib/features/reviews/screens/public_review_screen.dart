@@ -1,10 +1,10 @@
-// lib/features/reviews/screens/public_review_screen.dart - Fixed with proper tracking
+// lib/features/reviews/screens/public_review_screen.dart - Updated with simple tracking
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:revboostapp/core/services/email_service.dart';
 import 'package:revboostapp/core/services/firestore_service.dart';
-import 'package:revboostapp/core/services/page_view_service.dart';
+import 'package:revboostapp/core/services/simple_page_view_service.dart'; // Changed import
 import 'package:revboostapp/models/business_model.dart';
 import 'package:revboostapp/providers/feedback_provider.dart';
 import 'package:revboostapp/features/reviews/widgets/premium_business_header.dart';
@@ -40,12 +40,11 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
   bool _isSubmitting = false;
   final int _isSmallScreen = 900;
 
-  // Enhanced page view tracking
-  final PageViewService _pageViewService = PageViewService();
+  // Simple page view tracking
+  final SimplePageViewService _pageViewService = SimplePageViewService();
   String? _trackingId;
   String _pageViewSource = 'direct';
   bool _hasTrackedPageView = false;
-  String? _sessionId;
 
   // Animations
   late AnimationController _slideController;
@@ -57,8 +56,7 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
   void initState() {
     super.initState();
     _initAnimations();
-    _generateSessionId();
-    _extractTrackingInfo();
+    _extractSimpleTrackingInfo();
     _loadBusinessData();
   }
 
@@ -99,12 +97,7 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
     ));
   }
 
-  void _generateSessionId() {
-    // Generate a unique session ID for this visit
-    _sessionId = DateTime.now().millisecondsSinceEpoch.toString();
-  }
-
-  void _extractTrackingInfo() {
+  void _extractSimpleTrackingInfo() {
     try {
       Map<String, String> queryParams = {};
       
@@ -112,44 +105,24 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
         final currentUrl = html.window.location.href;
         final uri = Uri.parse(currentUrl);
         queryParams = uri.queryParameters;
-        
-        debugPrint('Current URL: $currentUrl');
-        debugPrint('Query parameters: $queryParams');
       }
       
       _trackingId = queryParams['tracking_id'];
       
-      // Determine source more accurately
+      // Simple source detection
       if (queryParams.containsKey('source')) {
         _pageViewSource = queryParams['source'] ?? 'direct';
       } else if (_trackingId != null && _trackingId!.isNotEmpty) {
         _pageViewSource = 'email';
-      } else if (queryParams.containsKey('ref')) {
-        _pageViewSource = queryParams['ref'] ?? 'link';
+      } else if (queryParams.containsKey('qr') || queryParams.containsKey('ref')) {
+        _pageViewSource = 'qr';
       } else {
-        // Check referrer to determine if it's from QR code or direct
-        if (kIsWeb) {
-          try {
-            final referrer = html.document.referrer;
-            if (referrer.isEmpty) {
-              _pageViewSource = 'qr'; // Likely QR code if no referrer
-            } else {
-              _pageViewSource = 'direct';
-            }
-          } catch (e) {
-            _pageViewSource = 'direct';
-          }
-        } else {
-          _pageViewSource = 'qr'; // Mobile app context likely means QR
-        }
+        _pageViewSource = 'direct';
       }
       
-      debugPrint('Extracted tracking info:');
-      debugPrint('  - Tracking ID: $_trackingId');
-      debugPrint('  - Source: $_pageViewSource');
-      debugPrint('  - Session ID: $_sessionId');
+      debugPrint('🔍 Simple tracking - Source: $_pageViewSource, Tracking ID: $_trackingId');
     } catch (e) {
-      debugPrint('Error extracting tracking info: $e');
+      debugPrint('❌ Error extracting tracking info: $e');
       _pageViewSource = 'direct';
     }
   }
@@ -177,7 +150,7 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
         });
 
         // Track page view immediately after business is loaded
-        await _trackPageView();
+        await _trackSimplePageView();
       } else {
         setState(() {
           _errorMessage = 'Business not found';
@@ -192,36 +165,26 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
     }
   }
 
-  Future<void> _trackPageView() async {
+  Future<void> _trackSimplePageView() async {
     if (_business == null || _hasTrackedPageView) return;
 
     try {
-      debugPrint('🔍 Tracking page view...');
-      debugPrint('  - Business ID: ${widget.businessId}');
-      debugPrint('  - Business Name: ${_business!.name}');
-      debugPrint('  - Source: $_pageViewSource');
-      debugPrint('  - Tracking ID: $_trackingId');
-      debugPrint('  - Session ID: $_sessionId');
-
+      debugPrint('📊 Tracking simple page view for ${_business!.name}');
+      
       await _pageViewService.trackPageView(
         businessId: widget.businessId,
         source: _pageViewSource,
         trackingId: _trackingId,
         metadata: {
           'businessName': _business!.name,
-          'sessionId': _sessionId,
           'timestamp': DateTime.now().toIso8601String(),
-          'userAgent': kIsWeb ? html.window.navigator.userAgent : 'mobile_app',
-          'platform': kIsWeb ? 'web' : 'mobile',
-          'url': kIsWeb ? html.window.location.href : 'mobile_app',
         },
       );
 
       _hasTrackedPageView = true;
-      debugPrint('✅ Page view tracked successfully');
+      debugPrint('✅ Simple page view tracked');
     } catch (e) {
-      debugPrint('❌ Page view tracking failed: $e');
-      // Don't fail the page load if tracking fails
+      debugPrint('❌ Simple page view tracking failed: $e');
     }
   }
 
@@ -259,26 +222,23 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
         metadata: {
           'source': _pageViewSource,
           'trackingId': _trackingId,
-          'sessionId': _sessionId,
           'submittedVia': 'public_review_page',
-          'timestamp': DateTime.now().toIso8601String(),
         },
       );
 
       if (success) {
         debugPrint('✅ Feedback submitted successfully');
         
-        // Update page view completion tracking
+        // Mark page view as completed with simple service
         try {
-          await _pageViewService.updatePageViewCompletion(
+          await _pageViewService.markPageViewCompleted(
             businessId: widget.businessId,
             trackingId: _trackingId,
             rating: _selectedRating.toDouble(),
-            completed: true,
           );
-          debugPrint('✅ Page view completion updated');
+          debugPrint('✅ Page view marked as completed');
         } catch (e) {
-          debugPrint('❌ Page view completion update failed: $e');
+          debugPrint('❌ Error marking page view completed: $e');
         }
 
         if (_selectedRating >= 4) {
@@ -299,6 +259,7 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
     }
   }
 
+  // Rest of the methods remain the same...
   void _showPlatformSelection() {
     showDialog(
       context: context,

@@ -57,7 +57,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => BusinessSetupProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
-        ChangeNotifierProvider(create: (_) => EnhancedDashboardProvider()),
+        ChangeNotifierProvider(create: (_) => SimplifiedDashboardProvider()),
         ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
         
         

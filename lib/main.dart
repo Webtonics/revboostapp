@@ -29,8 +29,8 @@ void main() async {
   // Optionally load from remote config
   // await apiConfig.loadFromRemoteConfig();
   await dotenv.load(fileName: ".env");
-  debugPrint('RESEND_API_KEY: ${dotenv.env['RESEND_API_KEY']}');
-  debugPrint('EMAIL_FROM_ADDRESS: ${dotenv.env['EMAIL_FROM_ADDRESS']}');
+  // debugPrint('RESEND_API_KEY: ${dotenv.env['RESEND_API_KEY']}');
+  // debugPrint('EMAIL_FROM_ADDRESS: ${dotenv.env['EMAIL_FROM_ADDRESS']}');
   
   setPathUrlStrategy();
 

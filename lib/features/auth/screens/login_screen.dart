@@ -111,11 +111,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: Theme.of(context).primaryColor.withOpacity(0.1),
                             ),
                             child: Image.asset(
-                              theme.isDarkMode 
-                                  ? 'assets/splash_logo_dark.png' 
-                                  : 'assets/splash_logo_light.png',
-                              width: 64, 
-                              height: 64,
+                                  'assets/splash_logo_light.png',
+                              width: 100, 
+                              height: 60,
                             ),
                           ),
                           const SizedBox(height: 24),

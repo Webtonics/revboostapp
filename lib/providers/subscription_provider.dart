@@ -91,6 +91,16 @@ class SubscriptionProvider with ChangeNotifier {
     ];
   }
   
+
+  String get currentPlanType {
+  if (isSubscribed) {
+    return _subscriptionStatus.planId ?? 'free';
+  } else if (isFreeTrial) {
+    return 'trial';
+  } else {
+    return 'free';
+  }
+}
   // Load subscription status with trial checks
   Future<void> _loadSubscriptionStatus() async {
     try {

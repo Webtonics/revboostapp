@@ -140,7 +140,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         AppButton(
                           text: 'Back to Login',
                           onPressed: () {
-                            context.pop();
+                            context.go(AppRoutes.login);
                           },
                           type: AppButtonType.secondary,
                           fullWidth: true,

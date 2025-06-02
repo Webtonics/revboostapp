@@ -1,6 +1,7 @@
 // lib/features/reviews/widgets/premium_platform_selection.dart
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class PremiumPlatformSelection extends StatelessWidget {
@@ -118,6 +119,19 @@ class PremiumPlatformSelection extends StatelessWidget {
                   ),
                   child: Text(
                     'Maybe Later',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: context.pop,
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.grey[600],
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                  child: Text(
+                    'Cancel',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: Colors.grey[600],
                     ),

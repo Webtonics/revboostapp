@@ -128,7 +128,7 @@ class CompleteReviewRequestService {
     }
   }
   
-  /// Import contacts from CSV (Premium feature)
+  /// Import contacts from CSV (Premium feature) - FIXED VERSION
   Future<Map<String, dynamic>> importContactsFromCsv({
     required String userId,
     required String businessId,
@@ -138,62 +138,63 @@ class CompleteReviewRequestService {
     required String reviewLink,
     bool sendImmediately = false,
   }) async {
-    // Check if user has premium access
-    if (!_hasPremiumAccess(planType)) {
-      throw Exception('CSV import is only available for premium users. Please upgrade your plan.');
-    }
-    
-    final validContacts = <Map<String, String>>[];
-    final errors = <String>[];
-    
-    // Validate contacts
-    for (int i = 0; i < contacts.length; i++) {
-      final contact = contacts[i];
-      final name = contact['name']?.trim();
-      final email = contact['email']?.trim();
-      
-      if (name == null || name.isEmpty) {
-        errors.add('Row ${i + 1}: Missing name');
-        continue;
-      }
-      
-      if (email == null || email.isEmpty) {
-        errors.add('Row ${i + 1}: Missing email');
-        continue;
-      }
-      
-      // Basic email validation
-      if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email)) {
-        errors.add('Row ${i + 1}: Invalid email format');
-        continue;
-      }
-      
-      validContacts.add({
-        'name': name,
-        'email': email,
-        'phone': contact['phone']?.trim() ?? '',
-      });
-    }
-    
-    if (validContacts.isEmpty) {
-      return {
-        'successful': 0,
-        'failed': contacts.length,
-        'errors': errors.isEmpty ? ['No valid contacts found'] : errors,
-      };
-    }
-    
-    // Check rate limit for all valid contacts
-    await _rateLimitService.checkAndUpdateUsage(
-      userId: userId,
-      planType: planType,
-      requestCount: validContacts.length,
-    );
-    
-    int successful = 0;
-    int failed = 0;
-    
     try {
+      // Check if user has premium access
+      if (!_hasPremiumAccess(planType)) {
+        throw Exception('CSV import is only available for premium users. Please upgrade your plan.');
+      }
+      
+      final validContacts = <Map<String, String>>[];
+      final errors = <String>[];
+      
+      // Validate contacts
+      for (int i = 0; i < contacts.length; i++) {
+        final contact = contacts[i];
+        final name = contact['name']?.trim();
+        final email = contact['email']?.trim();
+        
+        if (name == null || name.isEmpty) {
+          errors.add('Row ${i + 1}: Missing name');
+          continue;
+        }
+        
+        if (email == null || email.isEmpty) {
+          errors.add('Row ${i + 1}: Missing email');
+          continue;
+        }
+        
+        // Basic email validation
+        if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email)) {
+          errors.add('Row ${i + 1}: Invalid email format');
+          continue;
+        }
+        
+        validContacts.add({
+          'name': name,
+          'email': email,
+          'phone': contact['phone']?.trim() ?? '',
+        });
+      }
+      
+      if (validContacts.isEmpty) {
+        return {
+          'successful': 0,
+          'failed': contacts.length,
+          'errors': errors.isEmpty ? ['No valid contacts found'] : errors,
+        };
+      }
+      
+      // Check rate limit for all valid contacts
+      await _rateLimitService.checkAndUpdateUsage(
+        userId: userId,
+        planType: planType,
+        requestCount: validContacts.length,
+      );
+      
+      int successful = 0;
+      int failed = 0;
+      final createdRequestIds = <String>[];
+      
       // Create review requests in batches
       for (int i = 0; i < validContacts.length; i += 20) {
         final batch = _firestore.batch();
@@ -235,6 +236,10 @@ class CompleteReviewRequestService {
             
             batch.set(requestDoc, reviewRequest);
             successful++;
+            
+            if (sendImmediately) {
+              createdRequestIds.add(requestDoc.id);
+            }
           } catch (e) {
             failed++;
             errors.add('Error processing ${contact['name']}: $e');
@@ -245,13 +250,18 @@ class CompleteReviewRequestService {
         await batch.commit();
       }
       
-      // If sending immediately, send emails
-      if (sendImmediately) {
-        await _sendImportedRequests(
-          userId: userId,
-          businessName: businessName,
-          planType: planType,
-        );
+      // If sending immediately, send emails for created requests
+      if (sendImmediately && createdRequestIds.isNotEmpty) {
+        try {
+          await _sendCreatedRequests(
+            requestIds: createdRequestIds,
+            businessName: businessName,
+          );
+        } catch (e) {
+          debugPrint('Error sending emails after import: $e');
+          // Don't fail the entire import, just log the error
+          errors.add('Import successful but some emails failed to send: $e');
+        }
       }
       
       return {
@@ -261,38 +271,32 @@ class CompleteReviewRequestService {
         'sendImmediately': sendImmediately,
       };
     } catch (e) {
-      // Rollback usage if there was an error
-      await _rateLimitService.rollbackUsage(
-        userId: userId,
-        requestCount: successful,
-      );
+      debugPrint('Error in importContactsFromCsv: $e');
       
+      // Return proper error response
       return {
         'successful': 0,
-        'failed': validContacts.length,
-        'errors': [e.toString()],
+        'failed': contacts.length,
+        'errors': ['Import failed: ${e.toString()}'],
       };
     }
   }
   
-  /// Send imported requests (helper method)
-  Future<void> _sendImportedRequests({
-    required String userId,
+  /// Send specific created requests (helper method)
+  Future<void> _sendCreatedRequests({
+    required List<String> requestIds,
     required String businessName,
-    required String planType,
   }) async {
-    // Get all pending imported requests for this user
-    final snapshot = await _firestore
-        .collection(_collectionName)
-        .where('userId', isEqualTo: userId)
-        .where('status', isEqualTo: 'pending')
-        .where('metadata.source', isEqualTo: 'csv_import')
-        .limit(50) // Limit to avoid overwhelming email service
-        .get();
-    
-    for (final doc in snapshot.docs) {
+    for (final requestId in requestIds) {
       try {
-        final data = doc.data();
+        final doc = await _firestore.collection(_collectionName).doc(requestId).get();
+        
+        if (!doc.exists) {
+          debugPrint('Request $requestId not found');
+          continue;
+        }
+        
+        final data = doc.data() as Map<String, dynamic>;
         
         final success = await _emailService.sendReviewRequest(
           toEmail: data['customerEmail'],
@@ -300,19 +304,19 @@ class CompleteReviewRequestService {
           businessName: businessName,
           reviewLink: data['reviewLink'],
           customData: {
-            'requestId': doc.id,
+            'requestId': requestId,
             'trackingId': data['trackingId'],
             'source': 'csv_import',
           },
         );
         
         if (success) {
-          await _firestore.collection(_collectionName).doc(doc.id).update({
+          await _firestore.collection(_collectionName).doc(requestId).update({
             'status': 'sent',
             'sentAt': FieldValue.serverTimestamp(),
           });
         } else {
-          await _firestore.collection(_collectionName).doc(doc.id).update({
+          await _firestore.collection(_collectionName).doc(requestId).update({
             'status': 'failed',
             'metadata.sendError': 'Email service failed',
           });
@@ -321,14 +325,18 @@ class CompleteReviewRequestService {
         // Small delay to avoid overwhelming email service
         await Future.delayed(const Duration(milliseconds: 200));
       } catch (e) {
-        await _firestore.collection(_collectionName).doc(doc.id).update({
-          'status': 'failed',
-          'metadata.sendError': e.toString(),
-        });
+        debugPrint('Error sending request $requestId: $e');
+        try {
+          await _firestore.collection(_collectionName).doc(requestId).update({
+            'status': 'failed',
+            'metadata.sendError': e.toString(),
+          });
+        } catch (updateError) {
+          debugPrint('Failed to update request status: $updateError');
+        }
       }
     }
   }
-  
   /// Batch send existing requests (Premium feature)
   Future<Map<String, dynamic>> batchSendRequests({
     required String userId,

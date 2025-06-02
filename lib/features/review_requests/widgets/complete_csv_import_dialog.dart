@@ -1,22 +1,24 @@
 // lib/features/review_requests/widgets/complete_csv_import_dialog.dart
-// Complete CSV import with premium check
+// Production-ready CSV import dialog with explicit dependencies
 
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:revboostapp/models/business_model.dart';
-import 'package:revboostapp/providers/subscription_provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:csv/csv.dart';
 
-import '../../../providers/complete_review_request_provider.dart';
-
 class CompleteCsvImportDialog extends StatefulWidget {
   final BusinessModel business;
+  final bool hasPremiumAccess;
+  final bool isFreeTrial;
+  final Future<Map<String, dynamic>> Function(List<Map<String, String>>, bool) onImport;
   
   const CompleteCsvImportDialog({
     Key? key,
     required this.business,
+    required this.hasPremiumAccess,
+    required this.isFreeTrial,
+    required this.onImport,
   }) : super(key: key);
 
   @override
@@ -33,19 +35,12 @@ class _CompleteCsvImportDialogState extends State<CompleteCsvImportDialog> {
   
   @override
   Widget build(BuildContext context) {
-    return Consumer2<SubscriptionProvider, CompleteReviewRequestProvider>(
-      builder: (context, subscriptionProvider, reviewProvider, child) {
-        // Check if user has premium access
-        final hasPremiumAccess = subscriptionProvider.hasActiveAccess && 
-                               !subscriptionProvider.isFreeTrial;
-        
-        if (!hasPremiumAccess) {
-          return _buildUpgradeDialog(context);
-        }
-        
-        return _buildImportDialog(context, reviewProvider);
-      },
-    );
+    // Check if user has premium access
+    if (!widget.hasPremiumAccess) {
+      return _buildUpgradeDialog(context);
+    }
+    
+    return _buildImportDialog(context);
   }
   
   Widget _buildUpgradeDialog(BuildContext context) {
@@ -88,8 +83,7 @@ class _CompleteCsvImportDialogState extends State<CompleteCsvImportDialog> {
                   child: ElevatedButton(
                     onPressed: () {
                       Navigator.of(context).pop();
-                      // Navigate to subscription page
-                      // You can add navigation logic here
+                      // You can add navigation to subscription page here
                     },
                     child: const Text('Upgrade'),
                   ),
@@ -102,7 +96,7 @@ class _CompleteCsvImportDialogState extends State<CompleteCsvImportDialog> {
     );
   }
   
-  Widget _buildImportDialog(BuildContext context, CompleteReviewRequestProvider provider) {
+  Widget _buildImportDialog(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
@@ -168,13 +162,13 @@ class _CompleteCsvImportDialogState extends State<CompleteCsvImportDialog> {
               
               // Step content
               Flexible(
-                child: _buildStepContent(context, provider),
+                child: _buildStepContent(context),
               ),
               
               const SizedBox(height: 24),
               
               // Buttons
-              _buildButtons(context, provider),
+              _buildButtons(context),
             ],
           ),
         ),
@@ -182,7 +176,7 @@ class _CompleteCsvImportDialogState extends State<CompleteCsvImportDialog> {
     );
   }
   
-  Widget _buildStepContent(BuildContext context, CompleteReviewRequestProvider provider) {
+  Widget _buildStepContent(BuildContext context) {
     switch (_currentStep) {
       case 0:
         return _buildUploadStep(context);
@@ -402,7 +396,7 @@ class _CompleteCsvImportDialogState extends State<CompleteCsvImportDialog> {
     );
   }
   
-  Widget _buildButtons(BuildContext context, CompleteReviewRequestProvider provider) {
+  Widget _buildButtons(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
@@ -426,7 +420,7 @@ class _CompleteCsvImportDialogState extends State<CompleteCsvImportDialog> {
         
         if (_currentStep < 2) ...[
           ElevatedButton(
-            onPressed: _isLoading ? null : () => _handleNextStep(provider),
+            onPressed: _isLoading ? null : _handleNextStep,
             child: _isLoading
                 ? const SizedBox(
                     width: 20,
@@ -574,26 +568,22 @@ class _CompleteCsvImportDialogState extends State<CompleteCsvImportDialog> {
     return -1;
   }
   
-  Future<void> _handleNextStep(CompleteReviewRequestProvider provider) async {
+  Future<void> _handleNextStep() async {
     if (_currentStep == 0) {
       await _pickCsvFile();
     } else if (_currentStep == 1) {
-      await _importContacts(provider);
+      await _importContacts();
     }
   }
   
-  Future<void> _importContacts(CompleteReviewRequestProvider provider) async {
+  Future<void> _importContacts() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
     
     try {
-      final result = await provider.importContactsFromCsv(
-        contacts: _parsedContacts,
-        business: widget.business,
-        sendImmediately: _sendRequestsImmediately,
-      );
+      final result = await widget.onImport(_parsedContacts, _sendRequestsImmediately);
       
       if (result['successful'] > 0) {
         setState(() {

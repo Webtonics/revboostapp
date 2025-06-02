@@ -178,7 +178,7 @@ class RatingMetricCard extends StatelessWidget {
       value: rating > 0 ? rating.toStringAsFixed(1) : '—',
       icon: Icons.star_rounded,
       color: _getRatingColor(rating),
-      growthPercentage: growthPercentage,
+      // growthPercentage: growthPercentage,
       subtitle: totalReviews > 0 ? 'from $totalReviews reviews' : 'No reviews yet',
     );
   }

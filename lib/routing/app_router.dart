@@ -558,7 +558,7 @@ class AppRouter {
               path: AppRoutes.qrCode,
               pageBuilder: (context, state) => CustomTransitionPage(
                 key: state.pageKey,
-                child: const QrCodeScreen(),
+                child: const UpdatedQrCodeScreen(),
                 transitionsBuilder: (context, animation, secondaryAnimation, child) {
                   return FadeTransition(opacity: animation, child: child);
                 },

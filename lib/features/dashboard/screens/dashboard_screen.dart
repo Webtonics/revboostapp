@@ -468,12 +468,12 @@ class _SimplifiedDashboardScreenState extends State<SimplifiedDashboardScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Recent activity
-        Expanded(
-          flex: 2,
-          child: _buildRecentActivity(context, stats),
-        ),
+        // Expanded(
+        //   flex: 2,
+        //   child: _buildRecentActivity(context, stats),
+        // ),
         
-        const SizedBox(width: 24),
+        // const SizedBox(width: 24),
         
         // Quick actions
         Expanded(

@@ -114,14 +114,15 @@ class _PremiumSubmitButtonState extends State<PremiumSubmitButton>
                           Flexible(
                             child: Text(
                               widget.isSubmitting ? 'Submitting...' : widget.text,
-                              style: const TextStyle(
+                              style:  TextStyle(
                                 color: Colors.white,
-                                fontSize: 18,
+                                fontSize: MediaQuery.of(context).size.width >= 600 ? 18 : 15,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 0.5,
                               ),
                               textAlign: TextAlign.center,
-                              overflow: TextOverflow.ellipsis,
+                              softWrap: true,
+                              overflow: TextOverflow.visible,
                             ),
                           ),
                         ],

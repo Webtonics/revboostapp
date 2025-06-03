@@ -65,7 +65,19 @@ class PremiumBusinessHeader extends StatelessWidget {
           ),
           
           const SizedBox(height: 10),
-          
+          Text(
+            "wed'love to hear your feedback!",
+            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: const Color.fromARGB(255, 204, 253, 68),
+              fontSize: 16,
+              letterSpacing: -0.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+
+          const SizedBox(height: 10),
+
           // Subtitle
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -78,7 +90,7 @@ class PremiumBusinessHeader extends StatelessWidget {
               ),
             ),
             child: Text(
-              'How was your experience?',
+              'How was your experience with us?',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: Colors.white.withOpacity(0.9),
                 fontWeight: FontWeight.w500,

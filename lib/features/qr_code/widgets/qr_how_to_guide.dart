@@ -11,7 +11,7 @@ class QrHowToGuide extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
@@ -41,7 +41,7 @@ class QrHowToGuide extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
+                  gradient: const LinearGradient(
                     colors: [
                       AppColors.primary,
                       AppColors.secondary,
@@ -235,17 +235,21 @@ class QrHowToGuide extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.location_on_rounded,
                 color: AppColors.primary,
                 size: 20,
               ),
               const SizedBox(width: 8),
-              Text(
-                'Best Placement Ideas for Restaurants & Cafes',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
+              Flexible(
+                child: Text(
+                  'Best Placement Ideas for Restaurants & Cafes',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
                 ),
               ),
             ],
@@ -280,7 +284,7 @@ class QrHowToGuide extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(
+                const Icon(
                   Icons.lightbulb_outline_rounded,
                   color: AppColors.warning,
                   size: 16,

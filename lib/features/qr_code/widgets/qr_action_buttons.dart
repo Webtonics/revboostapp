@@ -130,13 +130,13 @@ class QrActionButtonsGrid extends StatelessWidget {
                 isLoading: isPrintLoading,
                 backgroundColor: AppColors.success,
               ),
-              QrActionButton(
-                icon: Icons.share_rounded,
-                label: 'Share',
-                onPressed: onShare,
-                isLoading: isShareLoading,
-                backgroundColor: AppColors.secondary,
-              ),
+              // QrActionButton(
+              //   icon: Icons.share_rounded,
+              //   label: 'Share',
+              //   onPressed: onShare,
+              //   isLoading: isShareLoading,
+              //   backgroundColor: AppColors.secondary,
+              // ),
               QrActionButton(
                 icon: Icons.download_rounded,
                 label: 'Download',

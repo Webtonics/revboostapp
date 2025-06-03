@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:revboostapp/providers/auth_provider.dart';
-import 'package:revboostapp/providers/theme_provider.dart';
 import 'package:revboostapp/routing/app_router.dart';
 import 'package:revboostapp/widgets/common/app_button.dart';
 import 'package:revboostapp/widgets/common/loading_overlay.dart';
@@ -85,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.read<ThemeProvider>();
+    // final theme = context.read<ThemeProvider>();
     
     return Scaffold(
       body: LoadingOverlay(
@@ -105,15 +104,20 @@ class _LoginScreenState extends State<LoginScreen> {
                       Column(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.all(18),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(20),
                               color: Theme.of(context).primaryColor.withOpacity(0.1),
                             ),
-                            child: Image.asset(
+                            child: MediaQuery.of(context).size.width <=600 ? Image.asset(
                                   'assets/splash_logo_light.png',
                               width: 100, 
                               height: 60,
+                            ): Image.asset(
+                                  'assets/splash_logo_light.png',
+                              width: MediaQuery.of(context).size.width * 0.1,
+                              height: MediaQuery.of(context).size.height * 0.1,
+                              fit: BoxFit.cover ,
                             ),
                           ),
                           const SizedBox(height: 24),

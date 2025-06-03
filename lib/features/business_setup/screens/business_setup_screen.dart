@@ -322,6 +322,7 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen>
       child: Row(
         children: [
           // Left side - Progress indicator (fixed width)
+          // ignore: sized_box_for_whitespace
           Container(
             width: 400,
             child: SetupProgressIndicator(

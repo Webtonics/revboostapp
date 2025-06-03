@@ -85,42 +85,45 @@ class _SimplifiedDashboardScreenState extends State<SimplifiedDashboardScreen> {
   }
 
   Widget _buildHeader(BuildContext context, business, SimplifiedDashboardProvider provider) {
-    final theme = Theme.of(context);
-    
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  final theme = Theme.of(context);
+  final isSmallScreen = MediaQuery.of(context).size.width < 600;
+  final isVerySmallScreen = MediaQuery.of(context).size.width < 400;
+  
+  if (isSmallScreen) {
+    // Mobile layout - stack vertically
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Welcome back!',
-                style: theme.textTheme.headlineLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+        // Header text section
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Welcome back!',
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Here\'s how ${business.name} is performing',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: theme.colorScheme.onSurface.withOpacity(0.7),
-                ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Here\'s how ${business.name} is performing',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Last updated: ${_formatLastUpdated(provider.stats.lastUpdated)}',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurface.withOpacity(0.5),
-                ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Last updated: ${_formatLastUpdated(provider.stats.lastUpdated)}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.5),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
         
-        const SizedBox(width: 24),
+        const SizedBox(height: 16),
         
-        // Preview button and refresh
+        // Actions section
         Row(
           children: [
             IconButton(
@@ -129,14 +132,22 @@ class _SimplifiedDashboardScreenState extends State<SimplifiedDashboardScreen> {
               tooltip: 'Refresh Data',
             ),
             
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             
-            ElevatedButton.icon(
-              onPressed: () => _previewReviewPage(provider.getReviewPageUrl()),
-              icon: const Icon(Icons.open_in_new, color: Colors.white,),
-              label: const Text('Preview Review Funnel'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () => _previewReviewPage(provider.getReviewPageUrl()),
+                icon: const Icon(Icons.open_in_new, color: Colors.white),
+                label: Text(
+                  isVerySmallScreen ? 'Preview' : 'Preview Review Funnel',
+                  overflow: TextOverflow.ellipsis,
+                ),
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isVerySmallScreen ? 12 : 16, 
+                    vertical: 12
+                  ),
+                ),
               ),
             ),
           ],
@@ -144,7 +155,65 @@ class _SimplifiedDashboardScreenState extends State<SimplifiedDashboardScreen> {
       ],
     );
   }
-
+  
+  // Desktop/tablet layout - original horizontal layout
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Welcome back!',
+              style: theme.textTheme.headlineLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Here\'s how ${business.name} is performing',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Last updated: ${_formatLastUpdated(provider.stats.lastUpdated)}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.5),
+              ),
+            ),
+          ],
+        ),
+      ),
+      
+      const SizedBox(width: 24),
+      
+      // Preview button and refresh
+      Row(
+        children: [
+          IconButton(
+            onPressed: () => provider.refresh(),
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh Data',
+          ),
+          
+          const SizedBox(width: 12),
+          
+          ElevatedButton.icon(
+            onPressed: () => _previewReviewPage(provider.getReviewPageUrl()),
+            icon: const Icon(Icons.open_in_new, color: Colors.white),
+            label: const Text('Preview Review Funnel'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            ),
+          ),
+        ],
+      ),
+    ],
+  );
+}
   Widget _buildMetricsGrid(BuildContext context, SimplifiedDashboardStats stats, SimplifiedDashboardProvider provider) {
     return LayoutBuilder(
       builder: (context, constraints) {

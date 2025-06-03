@@ -1,4 +1,4 @@
-// lib/features/qr_code/services/qr_pdf_service.dart
+// lib/core/services/qr_pdf_service.dart
 
 import 'dart:typed_data';
 import 'dart:math' as math;
@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/widgets.dart' as pdf;
 import 'package:printing/printing.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -27,72 +27,38 @@ enum QrPdfSize {
 }
 
 class QrPdfService {
-  /// Generate a modern, vibrant PDF for restaurants/cafes
+  /// Generate the EXACT elegant design from the preview
   static Future<Uint8List> generateModernQrPdf({
     required String businessName,
     required String reviewLink,
     QrPdfTemplate template = QrPdfTemplate.vibrant,
     QrPdfSize size = QrPdfSize.a4,
   }) async {
-    final pdf = pw.Document();
+    final pdfDoc = pdf.Document();
     
-    // Load fonts
-    final fontRegular = await PdfGoogleFonts.interRegular();
-    final fontBold = await PdfGoogleFonts.interBold();
-    final fontMedium = await PdfGoogleFonts.interMedium();
+    // Load fonts for elegant design
+    final fontRegular = await PdfGoogleFonts.crimsonTextRegular();
+    final fontBold = await PdfGoogleFonts.crimsonTextBold();
+    final fontItalic = await PdfGoogleFonts.crimsonTextItalic();
     
     // Generate QR code
     final qrCode = await _generateQrCodeImage(reviewLink);
     
-    // Choose template
-    switch (template) {
-      case QrPdfTemplate.vibrant:
-        pdf.addPage(_buildVibrantTemplate(
-          businessName: businessName,
-          qrCode: qrCode,
-          fontRegular: fontRegular,
-          fontBold: fontBold,
-          fontMedium: fontMedium,
-          size: size,
-        ));
-        break;
-      case QrPdfTemplate.modern:
-        pdf.addPage(_buildModernTemplate(
-          businessName: businessName,
-          qrCode: qrCode,
-          fontRegular: fontRegular,
-          fontBold: fontBold,
-          fontMedium: fontMedium,
-          size: size,
-        ));
-        break;
-      case QrPdfTemplate.elegant:
-        pdf.addPage(_buildElegantTemplate(
-          businessName: businessName,
-          qrCode: qrCode,
-          fontRegular: fontRegular,
-          fontBold: fontBold,
-          fontMedium: fontMedium,
-          size: size,
-        ));
-        break;
-      case QrPdfTemplate.minimal:
-        pdf.addPage(_buildMinimalTemplate(
-          businessName: businessName,
-          qrCode: qrCode,
-          fontRegular: fontRegular,
-          fontBold: fontBold,
-          fontMedium: fontMedium,
-          size: size,
-        ));
-        break;
-    }
+    // Build the EXACT elegant design from preview
+    pdfDoc.addPage(_buildExactElegantDesign(
+      businessName: businessName,
+      qrCode: qrCode,
+      fontRegular: fontRegular,
+      fontBold: fontBold,
+      fontItalic: fontItalic,
+      size: size,
+    ));
     
-    return pdf.save();
+    return pdfDoc.save();
   }
   
   /// Generate QR code as image
-  static Future<pw.ImageProvider> _generateQrCodeImage(String data) async {
+  static Future<pdf.ImageProvider> _generateQrCodeImage(String data) async {
     try {
       final qrPainter = QrPainter(
         data: data,
@@ -102,7 +68,6 @@ class QrPdfService {
         emptyColor: const Color(0xFFFFFFFF),
       );
       
-      // Create a custom painter to generate the image
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
       const size = Size(400, 400);
@@ -116,269 +81,661 @@ class QrPdfService {
         throw Exception('Failed to generate QR code image');
       }
       
-      return pw.MemoryImage(byteData.buffer.asUint8List());
+      return pdf.MemoryImage(byteData.buffer.asUint8List());
     } catch (e) {
       debugPrint('Error generating QR code: $e');
       rethrow;
     }
   }
   
-  /// Vibrant template perfect for restaurants and cafes
-  static pw.Page _buildVibrantTemplate({
-    required String businessName,
-    required pw.ImageProvider qrCode,
-    required pw.Font fontRegular,
-    required pw.Font fontBold,
-    required pw.Font fontMedium,
-    required QrPdfSize size,
-  }) {
-    final pageFormat = _getPageFormat(size);
+  /// Build the EXACT elegant design from the preview
+  // static pdf.Page _buildExactElegantDesign({
+  //   required String businessName,
+  //   required pdf.ImageProvider qrCode,
+  //   required pdf.Font fontRegular,
+  //   required pdf.Font fontBold,
+  //   required pdf.Font fontItalic,
+  //   required QrPdfSize size,
+  // }) {
+  //   final pageFormat = _getPageFormat(size);
     
-    return pw.Page(
-      pageFormat: pageFormat,
-      margin: const pw.EdgeInsets.all(0),
-      build: (pw.Context context) {
-        return pw.Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: pw.BoxDecoration(
-            gradient: pw.LinearGradient(
-              begin: pw.Alignment.topLeft,
-              end: pw.Alignment.bottomRight,
-              colors: [
-                PdfColor.fromHex('#FF6B6B'), // Coral
-                PdfColor.fromHex('#4ECDC4'), // Turquoise
-                PdfColor.fromHex('#45B7D1'), // Blue
-                PdfColor.fromHex('#96CEB4'), // Mint
-              ],
-              stops: const [0.0, 0.3, 0.7, 1.0],
-            ),
-          ),
-          child: pw.Stack(
-            children: [
-              // Organic shapes background
-              ..._buildOrganicShapes(),
+  //   return pdf.Page(
+  //     pageFormat: pageFormat,
+  //     margin: const pdf.EdgeInsets.all(0),
+  //     build: (pdf.Context context) {
+  //       return pdf.Container(
+  //         width: double.infinity,
+  //         height: double.infinity,
+  //         // EXACT background from preview - deep navy gradient
+  //         decoration: pdf.BoxDecoration(
+  //           gradient: pdf.LinearGradient(
+  //             begin: pdf.Alignment.topLeft,
+  //             end: pdf.Alignment.bottomRight,
+  //             colors: [
+  //               PdfColor.fromHex('#1a1a2e'), // Deep navy
+  //               PdfColor.fromHex('#16213e'), // Navy blue  
+  //               PdfColor.fromHex('#0f3460'), // Deep blue
+  //             ],
+  //           ),
+  //         ),
+  //         child: pdf.Stack(
+  //           children: [
+  //             // Subtle radial pattern overlay (like preview)
+  //             pdf.Container(
+  //               decoration: const pdf.BoxDecoration(
+  //                 gradient: pdf.RadialGradient(
+  //                   center: pdf.Alignment.topLeft,
+  //                   radius: 2.0,
+  //                   colors: [
+  //                     PdfColor.fromInt(0x08d4af37), // 3% gold overlay
+  //                     PdfColor.fromInt(0x00000000), // transparent
+  //                   ],
+  //                 ),
+  //               ),
+  //             ),
               
-              // Main content
-              pw.Center(
-                child: pw.Container(
-                  width: pageFormat.width * 0.8,
-                  height: pageFormat.height * 0.85,
-                  padding: const pw.EdgeInsets.all(30),
-                  decoration: pw.BoxDecoration(
-                    color: PdfColors.white,
-                    borderRadius: pw.BorderRadius.circular(25),
-                    boxShadow: const [
-                      pw.BoxShadow(
-                      color: PdfColor.fromInt(0x26000000), // 15% opacity black
-                      blurRadius: 30,
-                    ),
-                    ],
-                  ),
-                  child: pw.Column(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Header section
-                      pw.Column(
-                        children: [
-                          // Main title
-                          pw.Container(
-                            padding: const pw.EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 15,
-                            ),
-                            decoration: pw.BoxDecoration(
-                              gradient: pw.LinearGradient(
-                                colors: [
-                                  PdfColor.fromHex('#FF6B6B'),
-                                  PdfColor.fromHex('#4ECDC4'),
-                                ],
-                              ),
-                              borderRadius: pw.BorderRadius.circular(30),
-                            ),
-                            child: pw.Text(
-                              'LEAVE A REVIEW',
-                              style: pw.TextStyle(
-                                font: fontBold,
-                                fontSize: 28,
-                                color: PdfColors.white,
-                                letterSpacing: 2,
-                              ),
-                              textAlign: pw.TextAlign.center,
-                            ),
-                          ),
-                          
-                          pw.SizedBox(height: 20),
-                          
-                          // Subtitle
-                          pw.Text(
-                            'How did we do?',
-                            style: pw.TextStyle(
-                              font: fontMedium,
-                              fontSize: 24,
-                              color: PdfColor.fromHex('#FF6B6B'),
-                            ),
-                            textAlign: pw.TextAlign.center,
-                          ),
-                          
-                          pw.SizedBox(height: 15),
-                          
-                          // Instructions
-                          pw.Text(
-                            'Scan the QR code below to share your feedback',
-                            style: pw.TextStyle(
-                              font: fontRegular,
-                              fontSize: 16,
-                              color: PdfColor.fromHex('#4ECDC4'),
-                            ),
-                            textAlign: pw.TextAlign.center,
-                          ),
-                        ],
-                      ),
-                      
-                      // QR Code section
-                      pw.Container(
-                        padding: const pw.EdgeInsets.all(20),
-                        decoration: pw.BoxDecoration(
-                          gradient: pw.LinearGradient(
-                            colors: [
-                              PdfColor.fromHex('#F8F9FA'),
-                              PdfColors.white,
-                            ],
-                          ),
-                          borderRadius: pw.BorderRadius.circular(20),
-                          border: pw.Border.all(
-                            color: PdfColor.fromHex('#E9ECEF'),
-                            width: 2,
-                          ),
-                        ),
-                        child: pw.Image(
-                          qrCode,
-                          width: 180,
-                          height: 180,
-                        ),
-                      ),
-                      
-                      // Business name and footer
-                      pw.Column(
-                        children: [
-                          pw.Container(
-                            padding: const pw.EdgeInsets.symmetric(
-                              horizontal: 25,
-                              vertical: 12,
-                            ),
-                            decoration: pw.BoxDecoration(
-                              color: const PdfColor.fromInt(0x1A45B7D1), // Light blue with 10% opacity
-                              borderRadius: pw.BorderRadius.circular(25),
-                              border: pw.Border.all(
-                                color: PdfColor.fromHex('#45B7D1'),
-                                width: 1,
-                              ),
-                            ),
-                            child: pw.Text(
-                              businessName,
-                              style: pw.TextStyle(
-                                font: fontBold,
-                                fontSize: 20,
-                                color: PdfColor.fromHex('#2C3E50'),
-                              ),
-                              textAlign: pw.TextAlign.center,
-                            ),
-                          ),
-                          
-                          pw.SizedBox(height: 20),
-                          
-                          // Thank you message
-                          pw.Text(
-                            'Thank you for helping us improve! 🌟',
-                            style: pw.TextStyle(
-                              font: fontMedium,
-                              fontSize: 14,
-                              color: PdfColor.fromHex('#6C757D'),
-                            ),
-                            textAlign: pw.TextAlign.center,
-                          ),
-                          
-                          pw.SizedBox(height: 15),
-                          
-                          // RevBoost branding
-                          pw.Container(
-                            padding: const pw.EdgeInsets.symmetric(
-                              horizontal: 15,
-                              vertical: 8,
-                            ),
-                            decoration: pw.BoxDecoration(
-                              gradient: pw.LinearGradient(
-                                colors: [
-                                  PdfColor.fromHex('#667EEA'),
-                                  PdfColor.fromHex('#764BA2'),
-                                ],
-                              ),
-                              borderRadius: pw.BorderRadius.circular(15),
-                            ),
-                            child: pw.Text(
-                              'Powered by RevBoost',
-                              style: pw.TextStyle(
-                                font: fontMedium,
-                                fontSize: 12,
-                                color: PdfColors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+  //             // EXACT elegant border from preview
+  //             pdf.Positioned(
+  //               top: 20,
+  //               left: 20,
+  //               right: 20,
+  //               bottom: 20,
+  //               child: pdf.Container(
+  //                 decoration: pdf.BoxDecoration(
+  //                   border: pdf.Border.all(
+  //                     color: const PdfColor.fromInt(0x4Dd4af37), // 30% gold
+  //                     width: 2,
+  //                   ),
+  //                   borderRadius: pdf.BorderRadius.circular(8),
+  //                 ),
+  //               ),
+  //             ),
+              
+  //             // EXACT corner ornaments from preview
+  //             ..._buildExactCornerOrnaments(),
+              
+  //             // Main content - EXACTLY like preview
+  //             pdf.Container(
+  //               width: double.infinity,
+  //               height: double.infinity,
+  //               padding: const pdf.EdgeInsets.symmetric(horizontal: 40, vertical: 60),
+  //               child: pdf.Column(
+  //                 mainAxisAlignment: pdf.MainAxisAlignment.spaceBetween,
+  //                 children: [
+  //                   // Header section - EXACTLY like preview
+  //                   pdf.Column(
+  //                     children: [
+  //                       // EXACT title styling from preview
+  //                       pdf.Text(
+  //                         'WE VALUE YOUR OPINION',
+  //                         style: pdf.TextStyle(
+  //                           font: fontBold,
+  //                           fontSize: 28,
+  //                           color: PdfColor.fromHex('#d4af37'), // Gold
+  //                           letterSpacing: 3,
+  //                         ),
+  //                         textAlign: pdf.TextAlign.center,
+  //                       ),
+                        
+  //                       pdf.SizedBox(height: 20),
+                        
+  //                       // EXACT gold divider from preview
+  //                       pdf.Container(
+  //                         width: 60,
+  //                         height: 1,
+  //                         decoration: pdf.BoxDecoration(
+  //                           gradient: pdf.LinearGradient(
+  //                             colors: [
+  //                               const PdfColor.fromInt(0x00000000), // transparent
+  //                               PdfColor.fromHex('#d4af37'),
+  //                               const PdfColor.fromInt(0x00000000), // transparent
+  //                             ],
+  //                           ),
+  //                         ),
+  //                       ),
+                        
+  //                       pdf.SizedBox(height: 25),
+                        
+  //                       // EXACT italic subtitle from preview
+  //                       pdf.Text(
+  //                         'How was your experience?',
+  //                         style: pdf.TextStyle(
+  //                           font: fontItalic,
+  //                           fontSize: 32,
+  //                           color: PdfColors.white,
+  //                         ),
+  //                         textAlign: pdf.TextAlign.center,
+  //                       ),
+                        
+  //                       pdf.SizedBox(height: 20),
+                        
+  //                       // EXACT instruction text from preview
+  //                       pdf.Container(
+  //                         width: 350,
+  //                         child: pdf.Text(
+  //                           'Please take a moment to scan the QR code below and share your valuable feedback with us',
+  //                           style: pdf.TextStyle(
+  //                             font: fontRegular,
+  //                             fontSize: 16,
+  //                             color: const PdfColor.fromInt(0xCCFFFFFF), // 80% white
+  //                             height: 1.6,
+  //                           ),
+  //                           textAlign: pdf.TextAlign.center,
+  //                         ),
+  //                       ),
+  //                     ],
+  //                   ),
+                    
+  //                   // QR section - EXACTLY like preview
+  //                   pdf.Container(
+  //                     padding: const pdf.EdgeInsets.all(30),
+  //                     decoration: pdf.BoxDecoration(
+  //                       color: const PdfColor.fromInt(0xFAFFFFFF), // 98% white
+  //                       borderRadius: pdf.BorderRadius.circular(8),
+  //                       boxShadow: [
+  //                         const pdf.BoxShadow(
+  //                           color: PdfColor.fromInt(0x1A000000), // 10% black
+  //                           blurRadius: 35,
+  //                         ),
+  //                         const pdf.BoxShadow(
+  //                           color: PdfColor.fromInt(0x14000000), // 8% black
+  //                           blurRadius: 15,
+  //                         ),
+  //                       ],
+  //                       border: pdf.Border.all(
+  //                         color: const PdfColor.fromInt(0x33d4af37), // 20% gold
+  //                         width: 1,
+  //                       ),
+  //                     ),
+  //                     child: pdf.Image(
+  //                       qrCode,
+  //                       width: 200,
+  //                       height: 200,
+  //                     ),
+  //                   ),
+                    
+  //                   // Footer section - EXACTLY like preview
+  //                   pdf.Column(
+  //                     children: [
+  //                       // EXACT business name styling from preview
+  //                       pdf.Container(
+  //                         padding: const pdf.EdgeInsets.symmetric(horizontal: 30, vertical: 18),
+  //                         decoration: pdf.BoxDecoration(
+  //                           color: const PdfColor.fromInt(0x26d4af37), // 15% gold
+  //                           border: pdf.Border.all(
+  //                             color: const PdfColor.fromInt(0x66d4af37), // 40% gold
+  //                             width: 1,
+  //                           ),
+  //                           borderRadius: pdf.BorderRadius.circular(4),
+  //                         ),
+  //                         child: pdf.Text(
+  //                           businessName,
+  //                           style: pdf.TextStyle(
+  //                             font: fontBold,
+  //                             fontSize: 24,
+  //                             color: PdfColor.fromHex('#d4af37'),
+  //                             letterSpacing: 1,
+  //                           ),
+  //                           textAlign: pdf.TextAlign.center,
+  //                         ),
+  //                       ),
+                        
+  //                       pdf.SizedBox(height: 25),
+                        
+  //                       // EXACT gold divider from preview
+  //                       pdf.Container(
+  //                         width: 60,
+  //                         height: 1,
+  //                         decoration: pdf.BoxDecoration(
+  //                           gradient: pdf.LinearGradient(
+  //                             colors: [
+  //                               const PdfColor.fromInt(0x00000000), // transparent
+  //                               PdfColor.fromHex('#d4af37'),
+  //                               const PdfColor.fromInt(0x00000000), // transparent
+  //                             ],
+  //                           ),
+  //                         ),
+  //                       ),
+                        
+  //                       pdf.SizedBox(height: 20),
+                        
+  //                       // EXACT thank you message from preview
+  //                       pdf.Text(
+  //                         'Thank you for choosing us',
+  //                         style: pdf.TextStyle(
+  //                           font: fontRegular,
+  //                           fontSize: 14,
+  //                           color: const PdfColor.fromInt(0xB3FFFFFF), // 70% white
+  //                         ),
+  //                         textAlign: pdf.TextAlign.center,
+  //                       ),
+                        
+  //                       pdf.SizedBox(height: 4),
+                        
+  //                       // EXACT stars from preview
+  //                       pdf.Text(
+  //                         '★ ★ ★',
+  //                         style: pdf.TextStyle(
+  //                           font: fontBold,
+  //                           fontSize: 16,
+  //                           color: PdfColor.fromHex('#d4af37'),
+  //                           letterSpacing: 4,
+  //                         ),
+  //                         textAlign: pdf.TextAlign.center,
+  //                       ),
+                        
+  //                       pdf.SizedBox(height: 4),
+                        
+  //                       pdf.Text(
+  //                         'Your feedback helps us serve you better',
+  //                         style: pdf.TextStyle(
+  //                           font: fontRegular,
+  //                           fontSize: 14,
+  //                           color: const PdfColor.fromInt(0xB3FFFFFF), // 70% white
+  //                         ),
+  //                         textAlign: pdf.TextAlign.center,
+  //                       ),
+                        
+  //                       pdf.SizedBox(height: 20),
+                        
+  //                       // EXACT branding from preview
+  //                       pdf.Container(
+  //                         padding: const pdf.EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  //                         decoration: pdf.BoxDecoration(
+  //                           color: const PdfColor.fromInt(0x1AFFFFFF), // 10% white
+  //                           border: pdf.Border.all(
+  //                             color: const PdfColor.fromInt(0x33FFFFFF), // 20% white
+  //                             width: 1,
+  //                           ),
+  //                           borderRadius: pdf.BorderRadius.circular(4),
+  //                         ),
+  //                         child: pdf.Text(
+  //                           'POWERED BY REVBOOST',
+  //                           style: pdf.TextStyle(
+  //                             font: fontRegular,
+  //                             fontSize: 11,
+  //                             color: const PdfColor.fromInt(0xCCFFFFFF), // 80% white
+  //                             letterSpacing: 0.5,
+  //                           ),
+  //                         ),
+  //                       ),
+  //                     ],
+  //                   ),
+  //                 ],
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //       );
+  //     },
+  //   );
+  // }
+  // lib/core/services/qr_pdf_service.dart
+// Just replace the _buildExactElegantDesign method with this fixed version
+
+/// Build the EXACT elegant design from the preview - FIXED VERSION
+static pdf.Page _buildExactElegantDesign({
+  required String businessName,
+  required pdf.ImageProvider qrCode,
+  required pdf.Font fontRegular,
+  required pdf.Font fontBold,
+  required pdf.Font fontItalic,
+  required QrPdfSize size,
+}) {
+  final pageFormat = _getPageFormat(size);
+  
+  return pdf.Page(
+    pageFormat: pageFormat,
+    margin: const pdf.EdgeInsets.all(0),
+    build: (pdf.Context context) {
+      return pdf.Container(
+        width: double.infinity,
+        height: double.infinity,
+        // EXACT background from preview - deep navy gradient
+        decoration: pdf.BoxDecoration(
+          gradient: pdf.LinearGradient(
+            begin: pdf.Alignment.topLeft,
+            end: pdf.Alignment.bottomRight,
+            colors: [
+              PdfColor.fromHex('#1a1a2e'), // Deep navy
+              PdfColor.fromHex('#16213e'), // Navy blue  
+              PdfColor.fromHex('#0f3460'), // Deep blue
             ],
           ),
-        );
-      },
-    );
-  }
-  
-  /// Build organic background shapes
-  static List<pw.Widget> _buildOrganicShapes() {
+        ),
+        child: pdf.Stack(
+          children: [
+            // Subtle radial pattern overlay (like preview)
+            pdf.Container(
+              decoration: const pdf.BoxDecoration(
+                gradient: pdf.RadialGradient(
+                  center: pdf.Alignment.topLeft,
+                  radius: 2.0,
+                  colors: [
+                    PdfColor.fromInt(0x08d4af37), // 3% gold overlay
+                    PdfColor.fromInt(0x00000000), // transparent
+                  ],
+                ),
+              ),
+            ),
+            
+            // EXACT elegant border from preview
+            pdf.Positioned(
+              top: 20,
+              left: 20,
+              right: 20,
+              bottom: 20,
+              child: pdf.Container(
+                decoration: pdf.BoxDecoration(
+                  border: pdf.Border.all(
+                    color: const PdfColor.fromInt(0x4Dd4af37), // 30% gold
+                    width: 2,
+                  ),
+                  borderRadius: pdf.BorderRadius.circular(8),
+                ),
+              ),
+            ),
+            
+            // EXACT corner ornaments from preview
+            ..._buildExactCornerOrnaments(),
+            
+            // Main content - EXACTLY like preview
+            pdf.Container(
+              width: double.infinity,
+              height: double.infinity,
+              padding: const pdf.EdgeInsets.symmetric(horizontal: 40, vertical: 60),
+              child: pdf.Column(
+                mainAxisAlignment: pdf.MainAxisAlignment.spaceBetween,
+                children: [
+                  // Header section - EXACTLY like preview
+                  pdf.Column(
+                    children: [
+                      // EXACT title styling from preview
+                      pdf.Text(
+                        'WE VALUE YOUR OPINION',
+                        style: pdf.TextStyle(
+                          font: fontBold,
+                          fontSize: 28,
+                          color: PdfColor.fromHex('#d4af37'), // Gold
+                          letterSpacing: 3,
+                        ),
+                        textAlign: pdf.TextAlign.center,
+                      ),
+                      
+                      pdf.SizedBox(height: 20),
+                      
+                      // EXACT gold divider from preview
+                      pdf.Container(
+                        width: 60,
+                        height: 1,
+                        decoration: pdf.BoxDecoration(
+                          gradient: pdf.LinearGradient(
+                            colors: [
+                              const PdfColor.fromInt(0x00000000), // transparent
+                              PdfColor.fromHex('#d4af37'),
+                              const PdfColor.fromInt(0x00000000), // transparent
+                            ],
+                          ),
+                        ),
+                      ),
+                      
+                      pdf.SizedBox(height: 25),
+                      
+                      // EXACT italic subtitle from preview
+                      pdf.Text(
+                        'How was your experience?',
+                        style: pdf.TextStyle(
+                          font: fontItalic,
+                          fontSize: 32,
+                          color: PdfColors.white,
+                        ),
+                        textAlign: pdf.TextAlign.center,
+                      ),
+                      
+                      pdf.SizedBox(height: 20),
+                      
+                      // EXACT instruction text from preview
+                      pdf.Container(
+                        width: 350,
+                        child: pdf.Text(
+                          'Please take a moment to scan the QR code below and share your valuable feedback with us',
+                          style: pdf.TextStyle(
+                            font: fontRegular,
+                            fontSize: 16,
+                            color: const PdfColor.fromInt(0xCCFFFFFF), // 80% white
+                            height: 1.6,
+                          ),
+                          textAlign: pdf.TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  // QR section - EXACTLY like preview
+                  pdf.Container(
+                    padding: const pdf.EdgeInsets.all(30),
+                    decoration: pdf.BoxDecoration(
+                      color: const PdfColor.fromInt(0xFAFFFFFF), // 98% white
+                      borderRadius: pdf.BorderRadius.circular(8),
+                      boxShadow: [
+                        const pdf.BoxShadow(
+                          color: PdfColor.fromInt(0x1A000000), // 10% black
+                          blurRadius: 35,
+                        ),
+                        const pdf.BoxShadow(
+                          color: PdfColor.fromInt(0x14000000), // 8% black
+                          blurRadius: 15,
+                        ),
+                      ],
+                      border: pdf.Border.all(
+                        color: const PdfColor.fromInt(0x33d4af37), // 20% gold
+                        width: 1,
+                      ),
+                    ),
+                    child: pdf.Image(
+                      qrCode,
+                      width: 200,
+                      height: 200,
+                    ),
+                  ),
+                  
+                  // FIXED Footer section
+                  pdf.Column(
+                    children: [
+                      // FIXED business name styling - better visibility
+                      pdf.Container(
+                        padding: const pdf.EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+                        decoration: pdf.BoxDecoration(
+                          gradient: pdf.LinearGradient(
+                            colors: [
+                              PdfColor.fromHex('#d4af37'), // Full gold
+                              PdfColor.fromHex('#b8941f'), // Darker gold
+                            ],
+                          ),
+                          borderRadius: pdf.BorderRadius.circular(8),
+                          border: pdf.Border.all(
+                            color: PdfColor.fromHex('#d4af37'),
+                            width: 2,
+                          ),
+                          boxShadow: [
+                            const pdf.BoxShadow(
+                              color: PdfColor.fromInt(0x40d4af37), // 25% gold glow
+                              blurRadius: 15,
+                            ),
+                          ],
+                        ),
+                        child: pdf.Text(
+                          businessName,
+                          style: pdf.TextStyle(
+                            font: fontBold,
+                            fontSize: 26,
+                            color: PdfColor.fromHex('#1a1a2e'), // Dark navy text for contrast
+                            letterSpacing: 1.5,
+                          ),
+                          textAlign: pdf.TextAlign.center,
+                        ),
+                      ),
+                      
+                      pdf.SizedBox(height: 25),
+                      
+                      // EXACT gold divider from preview
+                      pdf.Container(
+                        width: 60,
+                        height: 1,
+                        decoration: pdf.BoxDecoration(
+                          gradient: pdf.LinearGradient(
+                            colors: [
+                              const PdfColor.fromInt(0x00000000), // transparent
+                              PdfColor.fromHex('#d4af37'),
+                              const PdfColor.fromInt(0x00000000), // transparent
+                            ],
+                          ),
+                        ),
+                      ),
+                      
+                      pdf.SizedBox(height: 20),
+                      
+                      // EXACT thank you message from preview
+                      pdf.Text(
+                        'Thank you for choosing us',
+                        style: pdf.TextStyle(
+                          font: fontRegular,
+                          fontSize: 16,
+                          color: const PdfColor.fromInt(0xE6FFFFFF), // 90% white - brighter
+                        ),
+                        textAlign: pdf.TextAlign.center,
+                      ),
+                      
+                      // pdf.SizedBox(height: 8),
+                      
+                      // // FIXED stars - better visibility
+                      // pdf.Text(
+                      //   '⭐⭐⭐⭐⭐',
+                      //   style: pdf.TextStyle(
+                      //     font: fontBold,
+                      //     fontSize: 20,
+                      //     color: PdfColor.fromHex('#d4af37'), // Bright gold
+                      //     letterSpacing: 6,
+                      //   ),
+                      //   textAlign: pdf.TextAlign.center,
+                      // ),
+                      
+                      pdf.SizedBox(height: 8),
+                      
+                      pdf.Text(
+                        'Your feedback helps us serve you better',
+                        style: pdf.TextStyle(
+                          font: fontRegular,
+                          fontSize: 16,
+                          color: const PdfColor.fromInt(0xE6FFFFFF), // 90% white - brighter
+                        ),
+                        textAlign: pdf.TextAlign.center,
+                      ),
+                      
+                      pdf.SizedBox(height: 25),
+                      
+                      // FIXED branding - better visibility
+                      pdf.Container(
+                        padding: const pdf.EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        decoration: pdf.BoxDecoration(
+                          gradient: const pdf.LinearGradient(
+                            colors: [
+                              PdfColor.fromInt(0x40070606), // 25% white
+                              PdfColor.fromInt(0x26251212), // 15% white
+                            ],
+                          ),
+                          border: pdf.Border.all(
+                            color: const PdfColor.fromInt(0x66FFFFFF), // 40% white border
+                            width: 1,
+                          ),
+                          borderRadius: pdf.BorderRadius.circular(6),
+                        ),
+                        child: pdf.Text(
+                          'POWERED BY REVBOOSTAPP',
+                          style: pdf.TextStyle(
+                            font: fontBold,
+                            fontSize: 12,
+                            color: PdfColors.white, // Full white for visibility
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+  /// Build EXACT corner ornaments from preview
+  static List<pdf.Widget> _buildExactCornerOrnaments() {
+    final goldColor = PdfColor.fromHex('#d4af37');
+    
     return [
-      // Top-left organic shape
-      pw.Positioned(
-        top: -50,
-        left: -50,
-        child: pw.Container(
-          width: 200,
-          height: 200,
-          decoration: pw.BoxDecoration(
-            color: const PdfColor.fromInt(0x1AFFFFFF), // 10% opacity white
-            borderRadius: pw.BorderRadius.circular(100),
+      // Top-left
+      pdf.Positioned(
+        top: 30,
+        left: 30,
+        child: pdf.Container(
+          width: 40,
+          height: 40,
+          decoration: pdf.BoxDecoration(
+            border: pdf.Border(
+              top: pdf.BorderSide(color: goldColor, width: 2),
+              left: pdf.BorderSide(color: goldColor, width: 2),
+            ),
           ),
         ),
       ),
       
-      // Bottom-right organic shape
-      pw.Positioned(
-        bottom: -80,
-        right: -80,
-        child: pw.Container(
-          width: 250,
-          height: 250,
-          decoration: pw.BoxDecoration(
-            color: const PdfColor.fromInt(0x14FFFFFF), // 8% opacity white
-            borderRadius: pw.BorderRadius.circular(125),
+      // Top-right
+      pdf.Positioned(
+        top: 30,
+        right: 30,
+        child: pdf.Container(
+          width: 40,
+          height: 40,
+          decoration: pdf.BoxDecoration(
+            border: pdf.Border(
+              top: pdf.BorderSide(color: goldColor, width: 2),
+              right: pdf.BorderSide(color: goldColor, width: 2),
+            ),
           ),
         ),
       ),
       
-      // Middle floating shape
-      pw.Positioned(
-        top: 150,
-        right: 50,
-        child: pw.Container(
-          width: 80,
-          height: 80,
-          decoration: pw.BoxDecoration(
-            color: const PdfColor.fromInt(0x1EFFFFFF), // 12% opacity white
-            borderRadius: pw.BorderRadius.circular(40),
+      // Bottom-left
+      pdf.Positioned(
+        bottom: 30,
+        left: 30,
+        child: pdf.Container(
+          width: 40,
+          height: 40,
+          decoration: pdf.BoxDecoration(
+            border: pdf.Border(
+              bottom: pdf.BorderSide(color: goldColor, width: 2),
+              left: pdf.BorderSide(color: goldColor, width: 2),
+            ),
+          ),
+        ),
+      ),
+      
+      // Bottom-right
+      pdf.Positioned(
+        bottom: 30,
+        right: 30,
+        child: pdf.Container(
+          width: 40,
+          height: 40,
+          decoration: pdf.BoxDecoration(
+            border: pdf.Border(
+              bottom: pdf.BorderSide(color: goldColor, width: 2),
+              right: pdf.BorderSide(color: goldColor, width: 2),
+            ),
           ),
         ),
       ),
@@ -399,64 +756,6 @@ class QrPdfService {
     }
   }
   
-  // Placeholder for other templates (can be implemented later)
-  static pw.Page _buildModernTemplate({
-    required String businessName,
-    required pw.ImageProvider qrCode,
-    required pw.Font fontRegular,
-    required pw.Font fontBold,
-    required pw.Font fontMedium,
-    required QrPdfSize size,
-  }) {
-    // Implementation for modern template
-    return _buildVibrantTemplate(
-      businessName: businessName,
-      qrCode: qrCode,
-      fontRegular: fontRegular,
-      fontBold: fontBold,
-      fontMedium: fontMedium,
-      size: size,
-    );
-  }
-  
-  static pw.Page _buildElegantTemplate({
-    required String businessName,
-    required pw.ImageProvider qrCode,
-    required pw.Font fontRegular,
-    required pw.Font fontBold,
-    required pw.Font fontMedium,
-    required QrPdfSize size,
-  }) {
-    // Implementation for elegant template
-    return _buildVibrantTemplate(
-      businessName: businessName,
-      qrCode: qrCode,
-      fontRegular: fontRegular,
-      fontBold: fontBold,
-      fontMedium: fontMedium,
-      size: size,
-    );
-  }
-  
-  static pw.Page _buildMinimalTemplate({
-    required String businessName,
-    required pw.ImageProvider qrCode,
-    required pw.Font fontRegular,
-    required pw.Font fontBold,
-    required pw.Font fontMedium,
-    required QrPdfSize size,
-  }) {
-    // Implementation for minimal template
-    return _buildVibrantTemplate(
-      businessName: businessName,
-      qrCode: qrCode,
-      fontRegular: fontRegular,
-      fontBold: fontBold,
-      fontMedium: fontMedium,
-      size: size,
-    );
-  }
-  
   /// Print or download PDF
   static Future<void> printOrDownloadPdf({
     required Uint8List pdfBytes,
@@ -475,7 +774,6 @@ class QrPdfService {
         );
       }
     } else {
-      // For mobile platforms
       if (download) {
         await Printing.sharePdf(
           bytes: pdfBytes,
@@ -489,48 +787,46 @@ class QrPdfService {
     }
   }
   
-  /// Generate multiple QR codes per page (useful for businesses with multiple locations)
+  /// Generate multiple QR codes per page
   static Future<Uint8List> generateMultipleQrPdf({
     required List<String> businessNames,
     required List<String> reviewLinks,
-    int perPage = 4,
+    int perPage = 2,
   }) async {
     if (businessNames.length != reviewLinks.length) {
       throw ArgumentError('Business names and review links must have the same length');
     }
     
-    final pdf = pw.Document();
-    final fontRegular = await PdfGoogleFonts.interRegular();
-    final fontBold = await PdfGoogleFonts.interBold();
+    final pdfDoc = pdf.Document();
+    final fontRegular = await PdfGoogleFonts.crimsonTextRegular();
+    final fontBold = await PdfGoogleFonts.crimsonTextBold();
     
-    // Process in chunks
     for (int i = 0; i < businessNames.length; i += perPage) {
       final endIndex = math.min(i + perPage, businessNames.length);
       final currentNames = businessNames.sublist(i, endIndex);
       final currentLinks = reviewLinks.sublist(i, endIndex);
       
-      // Generate QR codes for this batch
-      final qrCodes = <pw.ImageProvider>[];
+      final qrCodes = <pdf.ImageProvider>[];
       for (final link in currentLinks) {
         qrCodes.add(await _generateQrCodeImage(link));
       }
       
-      pdf.addPage(
-        pw.Page(
+      pdfDoc.addPage(
+        pdf.Page(
           pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(20),
+          margin: const pdf.EdgeInsets.all(40),
           build: (context) {
-            return pw.Wrap(
-              spacing: 20,
-              runSpacing: 20,
+            return pdf.Column(
               children: List.generate(currentNames.length, (index) {
-                return pw.Container(
-                  width: (PdfPageFormat.a4.width - 60) / 2, // 2 columns
-                  child: _buildMiniQrCard(
-                    businessName: currentNames[index],
-                    qrCode: qrCodes[index],
-                    fontRegular: fontRegular,
-                    fontBold: fontBold,
+                return pdf.Expanded(
+                  child: pdf.Container(
+                    margin: const pdf.EdgeInsets.symmetric(vertical: 20),
+                    child: _buildElegantMiniCard(
+                      businessName: currentNames[index],
+                      qrCode: qrCodes[index],
+                      fontRegular: fontRegular,
+                      fontBold: fontBold,
+                    ),
                   ),
                 );
               }),
@@ -540,79 +836,80 @@ class QrPdfService {
       );
     }
     
-    return pdf.save();
+    return pdfDoc.save();
   }
   
-  /// Build mini QR card for multiple QR layout
-  static pw.Widget _buildMiniQrCard({
+  /// Build elegant mini card
+  static pdf.Widget _buildElegantMiniCard({
     required String businessName,
-    required pw.ImageProvider qrCode,
-    required pw.Font fontRegular,
-    required pw.Font fontBold,
+    required pdf.ImageProvider qrCode,
+    required pdf.Font fontRegular,
+    required pdf.Font fontBold,
   }) {
-    return pw.Container(
-      padding: const pw.EdgeInsets.all(15),
-      decoration: pw.BoxDecoration(
-        color: PdfColors.white,
-        border: pw.Border.all(color: PdfColors.grey300, width: 2),
-        borderRadius: pw.BorderRadius.circular(12),
-        boxShadow: const [
-            pw.BoxShadow(
-            color: PdfColor.fromInt(0x4D808080), // 30% grey
-            blurRadius: 8,
-          ),
-        ],
+    return pdf.Container(
+      padding: const pdf.EdgeInsets.all(30),
+      decoration: pdf.BoxDecoration(
+        gradient: pdf.LinearGradient(
+          colors: [
+            PdfColor.fromHex('#1a1a2e'),
+            PdfColor.fromHex('#16213e'),
+          ],
+        ),
+        borderRadius: pdf.BorderRadius.circular(12),
+        border: pdf.Border.all(
+          color: PdfColor.fromHex('#d4af37'),
+          width: 1,
+        ),
       ),
-      child: pw.Column(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      child: pdf.Row(
         children: [
-          pw.Text(
-            'Leave a Review',
-            style: pw.TextStyle(
-              font: fontBold,
-              fontSize: 14,
-              color: PdfColor.fromHex('#FF6B6B'),
-            ),
-            textAlign: pw.TextAlign.center,
-          ),
-          
-          pw.SizedBox(height: 10),
-          
-          pw.Container(
-            width: 120,
-            height: 120,
-            child: pw.Image(
-              qrCode,
-              width: 120,
-              height: 120,
-            ),
-          ),
-          
-          pw.SizedBox(height: 10),
-          
-          pw.Column(
-            children: [
-              pw.Text(
-                businessName,
-                style: pw.TextStyle(
-                  font: fontBold,
-                  fontSize: 12,
-                  color: PdfColors.black,
-                ),
-                textAlign: pw.TextAlign.center,
-                maxLines: 2,
+          pdf.Container(
+            padding: const pdf.EdgeInsets.all(15),
+            decoration: pdf.BoxDecoration(
+              color: PdfColors.white,
+              borderRadius: pdf.BorderRadius.circular(8),
+              border: pdf.Border.all(
+                color: PdfColor.fromHex('#d4af37'),
+                width: 1,
               ),
-              pw.SizedBox(height: 4),
-              pw.Text(
-                'Scan to share your experience',
-                style: pw.TextStyle(
-                  font: fontRegular,
-                  fontSize: 8,
-                  color: PdfColors.grey700,
+            ),
+            child: pdf.Image(qrCode, width: 120, height: 120),
+          ),
+          pdf.SizedBox(width: 30),
+          pdf.Expanded(
+            child: pdf.Column(
+              crossAxisAlignment: pdf.CrossAxisAlignment.start,
+              mainAxisAlignment: pdf.MainAxisAlignment.center,
+              children: [
+                pdf.Text(
+                  'WE VALUE YOUR OPINION',
+                  style: pdf.TextStyle(
+                    font: fontBold,
+                    fontSize: 14,
+                    color: PdfColor.fromHex('#d4af37'),
+                    letterSpacing: 1,
+                  ),
                 ),
-                textAlign: pw.TextAlign.center,
-              ),
-            ],
+                pdf.SizedBox(height: 10),
+                pdf.Text(
+                  businessName,
+                  style: pdf.TextStyle(
+                    font: fontBold,
+                    fontSize: 20,
+                    color: PdfColors.white,
+                  ),
+                ),
+                pdf.SizedBox(height: 10),
+                pdf.Text(
+                  'Scan to share your experience',
+                  style: pdf.TextStyle(
+                    font: fontRegular,
+                    fontSize: 12,
+                    color: const PdfColor.fromInt(0xCCFFFFFF), // 80% white
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

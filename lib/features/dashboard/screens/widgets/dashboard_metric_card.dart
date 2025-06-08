@@ -6,6 +6,7 @@ class DashboardMetricCard extends StatelessWidget {
   final String title;
   final String value;
   final IconData icon;
+  final String? comingSoon;
   final Color color;
   final double? growthPercentage;
   final bool? isPositiveGrowth;
@@ -21,7 +22,7 @@ class DashboardMetricCard extends StatelessWidget {
     this.growthPercentage,
     this.isPositiveGrowth,
     this.subtitle,
-    this.onTap,
+    this.onTap, this.comingSoon,
   }) : super(key: key);
 
   @override
@@ -112,6 +113,16 @@ class DashboardMetricCard extends StatelessWidget {
                   ),
                 ),
               ],
+              // ComingSoon if provided
+              if (comingSoon != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  comingSoon!,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.5),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -178,7 +189,7 @@ class RatingMetricCard extends StatelessWidget {
       value: rating > 0 ? rating.toStringAsFixed(1) : '—',
       icon: Icons.star_rounded,
       color: _getRatingColor(rating),
-      // growthPercentage: growthPercentage,
+      growthPercentage: growthPercentage,
       subtitle: totalReviews > 0 ? 'from $totalReviews reviews' : 'No reviews yet',
     );
   }
@@ -193,19 +204,20 @@ class RatingMetricCard extends StatelessWidget {
 }
 
 class ConversionMetricCard extends StatelessWidget {
-  final double conversionRate;
+  // final double conversionRate;
   final int totalViews;
   final int totalConversions;
 
   const ConversionMetricCard({
     Key? key,
-    required this.conversionRate,
+    // required this.conversionRate,
     required this.totalViews,
     required this.totalConversions,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final conversionRate = totalConversions / totalViews.toDouble();
     return DashboardMetricCard(
       title: 'Conversion Rate',
       value: '${(conversionRate * 100).toStringAsFixed(1)}%',

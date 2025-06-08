@@ -258,17 +258,18 @@ class _SimplifiedDashboardScreenState extends State<SimplifiedDashboardScreen> {
               icon: Icons.qr_code_scanner,
               color: Colors.purple,
               subtitle: 'via QR code',
+              comingSoon: "Coming Soon",
               onTap: () => context.go(AppRoutes.qrCode),
             ),
             
             RatingMetricCard(
               rating: stats.averageRating,
               totalReviews: stats.reviewsReceived,
-              // growthPercentage: provider.getGrowthPercentage('rating'),
+              growthPercentage: provider.getGrowthPercentage('rating'),
             ),
             
             ConversionMetricCard(
-              conversionRate: stats.conversionRate,
+              // conversionRate: stats.conversionRate,
               totalViews: stats.pageViews,
               totalConversions: stats.reviewsReceived,
             ),

@@ -165,10 +165,11 @@ class PremiumPlatformSelection extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              platformData['icon'],
-              size: 24,
-            ),
+            // Icon(
+            //   platformData['icon'],
+            //   size: 24,
+            // ),
+            Image(image: AssetImage( platformData['icon'] as String),),
             const SizedBox(width: 12),
             Text(
               'Review on $platform',
@@ -188,22 +189,22 @@ class PremiumPlatformSelection extends StatelessWidget {
       case 'google':
       case 'google business profile':
         return {
-          'icon': Icons.business_rounded,
+          'icon': 'assets/icons/icons8-google.svg',
           'color': Colors.blue[600],
         };
       case 'facebook':
         return {
-          'icon': Icons.facebook_rounded,
+          'icon': "assets/icons/icons8-facebook.svg",
           'color': const Color(0xFF4267B2),
         };
       case 'yelp':
         return {
-          'icon': Icons.restaurant_menu_rounded,
+          'icon': 'assets/icons/icons8-yelp.svg',
           'color': const Color(0xFFD32323),
         };
       case 'tripadvisor':
         return {
-          'icon': Icons.travel_explore_rounded,
+          'icon': 'assets/icons/icons8-tripadvisor.svg',
           'color': const Color(0xFF00AA6C),
         };
       default:

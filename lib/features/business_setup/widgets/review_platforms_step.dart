@@ -16,22 +16,22 @@ class ReviewPlatformsStep extends StatelessWidget {
   // Platform configurations with icons and colors
   static const Map<String, Map<String, dynamic>> platformConfig = {
     'Google Business Profile': {
-      'icon': Icons.business_rounded,
+      'icon': "assets/icons/icons8-google.svg",
       'color': Color(0xFF4285F4),
       'description': 'Get reviews on Google Search & Maps',
     },
     'Yelp': {
-      'icon': Icons.restaurant_menu_rounded,
+      'icon': "assets/icons/icons8-yelp.svg",
       'color': Color(0xFFD32323),
       'description': 'Connect with local customers',
     },
     'Facebook': {
-      'icon': Icons.facebook_rounded,
+      'icon': "assets/icons/icons8-facebook.svg",
       'color': Color(0xFF1877F2),
       'description': 'Engage your social media audience',
     },
     'TripAdvisor': {
-      'icon': Icons.travel_explore_rounded,
+      'icon': "assets/icons/icons8-tripadvisor.svg",
       'color': Color(0xFF00AF87),
       'description': 'Perfect for hospitality & travel',
     },
@@ -425,10 +425,11 @@ class ReviewPlatformsStep extends StatelessWidget {
                 color: (config['color'] as Color).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
-                config['icon'] as IconData,
-                color: config['color'] as Color,
-                size: 20,
+              child: Image(
+                width: 20,
+                 image: AssetImage(config['icon']),
+                // color: config['color'] as Color,
+                // size: 20,
               ),
             ),
             const SizedBox(width: 12),
@@ -487,10 +488,9 @@ class ReviewPlatformsStep extends StatelessWidget {
             color: (config['color'] as Color).withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(
-            config['icon'] as IconData,
-            color: config['color'] as Color,
-            size: 24,
+          child:Image(
+            width: 20,
+            image: AssetImage(config['icon']),
           ),
         ),
         const SizedBox(width: 16),

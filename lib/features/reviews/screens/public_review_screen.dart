@@ -1,7 +1,6 @@
 // lib/features/reviews/screens/public_review_screen.dart - Updated with simple tracking
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:revboostapp/core/services/email_service.dart';
 import 'package:revboostapp/core/services/firestore_service.dart';
@@ -239,11 +238,11 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
           );
           debugPrint('✅ Page view marked as completed');
 
-          //clear data
-          _selectedRating = 0;
-          _feedbackController.clear();
-          _nameController.clear();
-          _emailController.clear();
+          // //clear data
+          // _selectedRating = 0;
+          // _feedbackController.clear();
+          // _nameController.clear();
+          // _emailController.clear();
 
         } catch (e) {
           debugPrint('❌ Error marking page view completed: $e');
@@ -379,26 +378,6 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
     );
   }
 
-  final ScrollController _scrollController = ScrollController();
-
-  void _handleKey(RawKeyEvent event) {
-    if (event is RawKeyDownEvent) {
-      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-        _scrollController.animateTo(
-          _scrollController.offset + 100,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-        );
-      } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-        _scrollController.animateTo(
-          _scrollController.offset - 100,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -500,82 +479,75 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
         ),
       );
     }
-
+    var _scrollController = ScrollController();
     return SafeArea(
   child: FadeTransition(
     opacity: _fadeAnimation,
     child: SlideTransition(
       position: _slideAnimation,
-      child: Focus(
-        autofocus: true,
-        onKey: (_, RawKeyEvent event) {
-          _handleKey(event);
-          return KeyEventResult.handled;
-        },
-        child: ScrollbarTheme(
-          data: ScrollbarThemeData(
-            thumbColor: MaterialStateProperty.all(Colors.purple), // Change color here
-            thickness: MaterialStateProperty.all(8), // Width of scrollbar
-            radius: Radius.circular(12), // Rounded scrollbar
-          ),
-          child: Scrollbar(
+      child: ScrollbarTheme(
+        data: ScrollbarThemeData(
+          thumbColor: MaterialStateProperty.all(Colors.purple), // Change color here
+          thickness: MaterialStateProperty.all(8), // Width of scrollbar
+          radius: const Radius.circular(12), // Rounded scrollbar
+        ),
+        child: Scrollbar(
+          controller: _scrollController,
+          thumbVisibility: true, // Always show
+          interactive: true,     // Allow dragging
+          child: SingleChildScrollView(
             controller: _scrollController,
-            thumbVisibility: true, // Always show
-            interactive: true,     // Allow dragging
-            child: SingleChildScrollView(
-              controller: _scrollController,
-              physics: const AlwaysScrollableScrollPhysics(
-                parent: BouncingScrollPhysics(),
-              ),
-              padding: EdgeInsets.symmetric(
-                horizontal: MediaQuery.of(context).size.width > 800 ? 48 : 24,
-                vertical: 24,
-              ),
-              child: Column(
-                children: [
-                  // Business Header
-                  PremiumBusinessHeader(business: _business!),
-
-                  SizedBox(height: MediaQuery.of(context).size.width > 800 ? 10 : 12),
-
-                  // Rating Widget
-                  PremiumRatingWidget(
-                    selectedRating: _selectedRating,
-                    onRatingChanged: (rating) {
-                      setState(() {
-                        _selectedRating = rating;
-                      });
-                    },
-                  ),
-
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            padding: EdgeInsets.symmetric(
+              horizontal: MediaQuery.of(context).size.width > 800 ? 48 : 24,
+              vertical: 24,
+            ),
+            child: Column(
+              children: [
+                // Business Header
+                PremiumBusinessHeader(business: _business!),
+      
+                SizedBox(height: MediaQuery.of(context).size.width > 800 ? 10 : 12),
+      
+                // Rating Widget
+                PremiumRatingWidget(
+                  selectedRating: _selectedRating,
+                  onRatingChanged: (rating) {
+                    setState(() {
+                      _selectedRating = rating;
+                    });
+                  },
+                ),
+      
+                SizedBox(height: MediaQuery.of(context).size.width > 800 ? 18 : 32),
+      
+                if (_selectedRating > 0 && _selectedRating <= 3) ...[
+                  PremiumFeedbackWidget(feedbackController: _feedbackController),
                   SizedBox(height: MediaQuery.of(context).size.width > 800 ? 18 : 32),
-
-                  if (_selectedRating > 0 && _selectedRating <= 3) ...[
-                    PremiumFeedbackWidget(feedbackController: _feedbackController),
-                    SizedBox(height: MediaQuery.of(context).size.width > 800 ? 18 : 32),
-                  ],
-
-                  if (_selectedRating > 0) ...[
-                    PremiumContactWidget(
-                      nameController: _nameController,
-                      emailController: _emailController,
-                    ),
-                    SizedBox(height: MediaQuery.of(context).size.width > 800 ? 18 : 32),
-                  ],
-
-                  if (_selectedRating > 0) ...[
-                    PremiumSubmitButton(
-                      isSubmitting: _isSubmitting,
-                      onPressed: _submitFeedback,
-                      text: _selectedRating >= 4
-                          ? 'Submit & Leave Public Review'
-                          : 'Submit Feedback',
-                    ),
-                  ],
-
-                  SizedBox(height: MediaQuery.of(context).size.width > 800 ? 64 : 48),
                 ],
-              ),
+      
+                if (_selectedRating > 0) ...[
+                  PremiumContactWidget(
+                    nameController: _nameController,
+                    emailController: _emailController,
+                  ),
+                  SizedBox(height: MediaQuery.of(context).size.width > 800 ? 18 : 32),
+                ],
+      
+                if (_selectedRating > 0) ...[
+                  PremiumSubmitButton(
+                    isSubmitting: _isSubmitting,
+                    onPressed: _submitFeedback,
+                    text: _selectedRating >= 4
+                        ? 'Submit & Leave Public Review'
+                        : 'Submit Feedback',
+                  ),
+                ],
+      
+                SizedBox(height: MediaQuery.of(context).size.width > 800 ? 64 : 48),
+              ],
             ),
           ),
         ),
@@ -584,5 +556,71 @@ class _PublicReviewScreenState extends State<PublicReviewScreen>
   ),
 );
 
+    // return SafeArea(
+    //   child: FadeTransition(
+    //     opacity: _fadeAnimation,
+    //     child: SlideTransition(
+    //       position: _slideAnimation,
+    //       child: SingleChildScrollView(
+            
+    //         physics: const BouncingScrollPhysics(),
+    //         padding: EdgeInsets.symmetric(
+    //           horizontal: MediaQuery.of(context).size.width > 800 ? 48 : 24,
+    //           vertical: 24,
+    //         ),
+    //         child: Column(
+    //           children: [
+    //             // Business Header
+    //             PremiumBusinessHeader(business: _business!),
+                
+    //             SizedBox(height: MediaQuery.of(context).size.width > 800 ?10 : 12),
+                
+    //             // Rating Widget
+    //             PremiumRatingWidget(
+    //               selectedRating: _selectedRating,
+    //               onRatingChanged: (rating) {
+    //                 setState(() {
+    //                   _selectedRating = rating;
+    //                 });
+    //               },
+    //             ),
+                
+    //             SizedBox(height: MediaQuery.of(context).size.width > 800 ? 18 : 32),
+                
+    //             // Feedback Widget (only for ratings 1-3)
+    //             if (_selectedRating > 0 && _selectedRating <= 3) ...[
+    //               PremiumFeedbackWidget(
+    //                 feedbackController: _feedbackController,
+    //               ),
+    //               SizedBox(height: MediaQuery.of(context).size.width > 800 ? 18 : 32),
+    //             ],
+                
+    //             // Contact Widget (for all ratings)
+    //             if (_selectedRating > 0) ...[
+    //               PremiumContactWidget(
+    //                 nameController: _nameController,
+    //                 emailController: _emailController,
+    //               ),
+    //               SizedBox(height: MediaQuery.of(context).size.width > 800 ? 18 : 32),
+    //             ],
+                
+    //             // Submit Button
+    //             if (_selectedRating > 0) ...[
+    //               PremiumSubmitButton(
+    //                 isSubmitting: _isSubmitting,
+    //                 onPressed: _submitFeedback,
+    //                 text: _selectedRating >= 4 
+    //                     ? 'Submit & Leave Public Review' 
+    //                     : 'Submit Feedback',
+    //               ),
+    //             ],
+                
+    //             SizedBox(height: MediaQuery.of(context).size.width > 800 ? 64 : 48),
+    //           ],
+    //         ),
+    //       ),
+    //     ),
+    //   ),
+    // );
   }
 }

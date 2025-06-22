@@ -169,10 +169,15 @@ class PremiumPlatformSelection extends StatelessWidget {
             //   platformData['icon'],
             //   size: 24,
             // ),
-            Image(image: AssetImage( platformData['icon'] as String),),
-            const SizedBox(width: 12),
+            // Image(
+            //   width : 24,
+            //   image: 
+            // AssetImage( platformData['icon'] as String),),
+            // const SizedBox(width: 12),
             Text(
-              'Review on $platform',
+              softWrap: true,
+              maxLines: 2,
+              platform,
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,

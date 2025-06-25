@@ -268,40 +268,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             const SizedBox(height: 24),
                             
                             // Terms and conditions agreement
-                            // Row(
-                            //   children: [
-                            //     Text(
-                            //           'By registering, you agree to our ',
-                            //           style: Theme.of(context).textTheme.bodySmall,
-                            //           textAlign: TextAlign.center,
-                            //         ),
-                            //     GestureDetector(
-                            //       onTap: () => launchMyUrl('https://revboostapp.com/terms-and-condition/'),
-                            //       child: const Text(
-                            //         'Terms of Service',
-                            //         style:TextStyle(color: Color.fromARGB(255, 2, 57, 102),
-                            //         fontSize: 11,
-                            //         fontWeight: FontWeight.w600),
-                            //         textAlign: TextAlign.center,
-                            //       ),
-                            //     ),
-                            //     Text(
-                            //           ' and',
-                            //           style: Theme.of(context).textTheme.bodySmall,
-                            //           textAlign: TextAlign.center,
-                            //         ),
-                            //         GestureDetector(
-                            //       onTap: () => launchMyUrl('https://revboostapp.com/privacy-policy-2/'),
-                            //       child: const Text(
-                            //         ' Privacy Policy',
-                            //         style:TextStyle(color: Color.fromARGB(255, 2, 57, 102),
-                            //         fontSize: 11,
-                            //         fontWeight: FontWeight.w600),
-                            //         textAlign: TextAlign.center,
-                            //       ),
-                            //     ),
-                            //   ],
-                            // ),
+                            Row(
+                              children: [
+                                Text(
+                                      'By registering, you agree to our ',
+                                      style: Theme.of(context).textTheme.bodySmall,
+                                      textAlign: TextAlign.center,
+                                    ),
+                                GestureDetector(
+                                  onTap: () => launchMyUrl('https://revboostapp.com/terms-conditions.html'),
+                                  child: const Text(
+                                    'Terms of Service',
+                                    style:TextStyle(color: Color.fromARGB(255, 2, 57, 102),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                                Text(
+                                      ' and',
+                                      style: Theme.of(context).textTheme.bodySmall,
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    GestureDetector(
+                                  onTap: () => launchMyUrl('https://revboostapp.com/privacy-policy.html'),
+                                  child: const Text(
+                                    ' Privacy Policy',
+                                    style:TextStyle(color: Color.fromARGB(255, 2, 57, 102),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ],
+                            ),
                             
                             const SizedBox(height: 24),
                             

@@ -174,15 +174,18 @@ class PremiumPlatformSelection extends StatelessWidget {
             //   image: 
             // AssetImage( platformData['icon'] as String),),
             // const SizedBox(width: 12),
+            
             Text(
+              platform, // this is your text string
               softWrap: true,
               maxLines: 2,
-              platform,
+              overflow: TextOverflow.ellipsis, // Prevents overflow
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
-            ),
+              textWidthBasis: TextWidthBasis.longestLine,
+            )
           ],
         ),
       ),

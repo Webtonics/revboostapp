@@ -1,6 +1,7 @@
 // lib/core/services/qr_pdf_service.dart
 
 import 'dart:typed_data';
+import 'dart:html' as html;
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
@@ -87,7 +88,28 @@ class QrPdfService {
       rethrow;
     }
   }
-  
+  ///Generate qr for download
+  static Future<Uint8List> generateQrCodePngBytes(String data) async {
+  final qrPainter = QrPainter(
+  data: data,
+  version: QrVersions.auto,
+  gapless: false,
+  color: const Color(0xFF000000),
+  emptyColor: const Color(0xFFFFFFFF),
+);
+
+// ✅ Let QrPainter handle the rendering
+final ui.Image img = await qrPainter.toImage(400);
+
+// Convert to PNG bytes
+final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+if (byteData == null) {
+  throw Exception('Failed to generate QR code image');
+}
+
+return byteData.buffer.asUint8List();
+}
+
 
 /// Build the EXACT elegant design from the preview - FIXED VERSION
 static pdf.Page _buildExactElegantDesign({
@@ -472,6 +494,20 @@ static pdf.Page _buildExactElegantDesign({
     }
   }
   
+  ///download Qrcode
+void downloadBytesWeb(Uint8List bytes, String filename) {
+  final blob = html.Blob([bytes]);
+  final url = html.Url.createObjectUrlFromBlob(blob);
+  final anchor = html.AnchorElement(href: url)
+    ..setAttribute('download', filename)
+    ..click();
+  html.Url.revokeObjectUrl(url);
+}
+
+Future<void> downloadQrCodeOnWeb(String data) async {
+  final bytes = await generateQrCodePngBytes(data);
+  downloadBytesWeb(bytes, 'qr_code.png');
+}
   /// Print or download PDF
   static Future<void> printOrDownloadPdf({
     required Uint8List pdfBytes,

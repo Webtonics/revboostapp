@@ -258,7 +258,6 @@ class _SimplifiedDashboardScreenState extends State<SimplifiedDashboardScreen> {
               icon: Icons.qr_code_scanner,
               color: Colors.purple,
               subtitle: 'via QR code',
-              comingSoon: "Coming Soon",
               onTap: () => context.go(AppRoutes.qrCode),
             ),
             

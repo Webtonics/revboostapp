@@ -29,6 +29,8 @@ class SubscriptionProvider with ChangeNotifier {
   Duration? _trialTimeRemaining;
   bool _hasHadTrial = false;
   bool _hasHadSubscription = false;
+  bool isLifetimeAccess = false;
+  //For lifetime access
   
   // Getters
   SubscriptionProviderStatus get status => _status;
@@ -38,6 +40,7 @@ class SubscriptionProvider with ChangeNotifier {
   String? get selectedPlanId => _selectedPlanId;
   bool get isProcessingCheckout => _isProcessingCheckout;
   bool get isProcessingTrial => _isProcessingTrial;
+
   
   // Enhanced computed properties
   bool get isSubscribed => _subscriptionStatus.isActive && !_subscriptionStatus.isFreeTrial;
@@ -101,6 +104,13 @@ class SubscriptionProvider with ChangeNotifier {
     return 'free';
   }
 }
+
+Future<bool> checkifLifetime() async {
+  bool isLifetimeAccess = await _subscriptionService.getLifetimeSubscriptionStatus();
+  
+  return isLifetimeAccess;   
+  
+}
   // Load subscription status with trial checks
   Future<void> _loadSubscriptionStatus() async {
     try {
@@ -140,7 +150,7 @@ class SubscriptionProvider with ChangeNotifier {
     }
   }
   
-  // Reload subscription status with enhanced checks
+  //// Reload subscription status with enhanced checks
   Future<void> reloadSubscriptionStatus({bool forceRefresh = false}) async {
     try {
       _status = SubscriptionProviderStatus.loading;

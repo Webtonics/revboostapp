@@ -28,6 +28,28 @@ class SubscriptionService {
     _firestore = firestore ?? FirebaseFirestore.instance,
     _auth = auth ?? FirebaseAuth.instance;
 
+
+  /// Get the current user's Lifetime subscription status
+  Future<bool> getLifetimeSubscriptionStatus() async {
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) {
+      return false;
+    }
+    
+    final userDoc = await _firestore.collection('users').doc(userId).get();
+    
+    if (!userDoc.exists) {
+      return false;
+    }
+    
+    final userData = userDoc.data()!;
+    
+    if (userData['hasFullAccess'] == true) {
+      return true;
+    }
+    
+    return false;
+  }
   /// Get the current user's subscription status with automatic trial expiry check
   Future<SubscriptionStatus> getSubscriptionStatus({bool forceRefresh = false}) async {
     final userId = _auth.currentUser?.uid;
@@ -52,7 +74,7 @@ class SubscriptionService {
     try {
       // Get from Firestore with cache disabled
       final userDoc = await _firestore.collection('users').doc(userId)
-          .get(GetOptions(source: Source.server));
+          .get(const GetOptions(source: Source.server));
       
       if (!userDoc.exists) {
         return SubscriptionStatus.free();

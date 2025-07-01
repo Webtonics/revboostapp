@@ -526,6 +526,7 @@ import 'package:revboostapp/widgets/common/loading_overlay.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/services/qr_pdf_service.dart';
+import '../../../core/utils/utils/downloader.dart';
 
 class UpdatedQrCodeScreen extends StatefulWidget {
   const UpdatedQrCodeScreen({Key? key}) : super(key: key);
@@ -655,7 +656,7 @@ class _UpdatedQrCodeScreenState extends State<UpdatedQrCodeScreen> {
       } else {
         pdfBytes = await QrPdfService.generateModernQrPdf(
           businessName: _business!.name,
-          reviewLink: _reviewLink,
+          reviewLink: "$_reviewLink?source=qr",
           template: QrPdfTemplate.vibrant,
           size: QrPdfSize.a4,
         );
@@ -701,7 +702,7 @@ class _UpdatedQrCodeScreenState extends State<UpdatedQrCodeScreen> {
       } else {
         pdfBytes = await QrPdfService.generateModernQrPdf(
           businessName: _business!.name,
-          reviewLink: _reviewLink,
+          reviewLink: "$_reviewLink?source=qr",
           template: QrPdfTemplate.vibrant,
           size: QrPdfSize.a4,
         );
@@ -744,51 +745,40 @@ class _UpdatedQrCodeScreenState extends State<UpdatedQrCodeScreen> {
     }
   }
 
-  /// Download QR code with instant feedback
-  Future<void> _downloadQrCode() async {
-    if (_business == null) return;
+ 
+Future<void> _downloadQrCode() async {
+  if (_business == null) return;
+
+  setState(() {
+    _isDownloadLoading = true;
+  });
+
+  _showLoadingSnackBar('Preparing QR code image...');
+
+  try {
+    final bytes = await QrPdfService.generateQrCodePngBytes( // Updated: use image instead of PDF
+      "$_reviewLink?source=qr",
+    );
+
+    final fileName = '${_business!.name.replaceAll(' ', '_')}_qr_code.png';
+    downloadBytesWeb(bytes, fileName);
     
-    setState(() {
-      _isDownloadLoading = true;
-    });
-    
-    _showLoadingSnackBar('Preparing download...');
 
-    try {
-      Uint8List pdfBytes;
-      
-      if (_cachedPdf != null) {
-        pdfBytes = _cachedPdf!;
-      } else {
-        pdfBytes = await QrPdfService.generateModernQrPdf(
-          businessName: _business!.name,
-          reviewLink: _reviewLink,
-          template: QrPdfTemplate.vibrant,
-          size: QrPdfSize.a4,
-        );
-      }
-
-      await QrPdfService.printOrDownloadPdf(
-        pdfBytes: pdfBytes,
-        fileName: '${_business!.name.replaceAll(' ', '_')}_qr_code.pdf',
-        download: true,
-      );
-
-      if (mounted) {
-        _showSuccessSnackBar('Download started!');
-      }
-    } catch (e) {
-      if (mounted) {
-        _showErrorSnackBar('Download failed: $e');
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isDownloadLoading = false;
-        });
-      }
+    if (mounted) {
+      _showSuccessSnackBar('Download started!');
+    }
+  } catch (e) {
+    if (mounted) {
+      _showErrorSnackBar('Download failed: $e');
+    }
+  } finally {
+    if (mounted) {
+      setState(() {
+        _isDownloadLoading = false;
+      });
     }
   }
+}
 
   /// Copy review link with haptic feedback
   void _copyLinkToClipboard() {
@@ -929,7 +919,7 @@ class _UpdatedQrCodeScreenState extends State<UpdatedQrCodeScreen> {
           // QR code display
           Center(
             child: QrDisplayCard(
-              data: _reviewLink,
+              data: "$_reviewLink?source=qr",
               businessName: _business!.name,
               size: 280,
             ),

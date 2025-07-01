@@ -234,15 +234,17 @@ class AppRouter {
       final hasActiveAccess = subscriptionProvider.hasActiveAccess;
       final isFreeTrial = subscriptionProvider.isFreeTrial;
       final isSubscribed = subscriptionProvider.isSubscribed;
+      final fullaccess = await subscriptionProvider.checkifLifetime();
       
       if (kDebugMode) {
         debugPrint('💰 Subscription check for premium route: $currentPath');
         debugPrint('💰 Has active access: $hasActiveAccess');
         debugPrint('💰 Is free trial: $isFreeTrial');
         debugPrint('💰 Is subscribed: $isSubscribed');
+        debugPrint('💰 Is lifetime access: $fullaccess');
       }
       
-      if (hasActiveAccess) {
+      if (hasActiveAccess || isFreeTrial || isSubscribed || fullaccess) {
         if (kDebugMode) {
           debugPrint('✅ Premium route allowed: $currentPath');
         }
